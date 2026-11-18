@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Lucky Green">
+<meta name="theme-color" content="#2e7d32">
+<title>Lucky Green</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  --green:#2e7d32; --green-dark:#1b5e20; --green-pale:#e8f5e9; --bg:#f3f7f2;
+  --text:#1a1a1a; --muted:#555; --line:#d5dfd3; --red:#b3261e; --amber:#8a5a00; --amber-pale:#fff4dc;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text)}
+body{font:18px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom));min-height:100vh}
+header{position:sticky;top:0;z-index:5;background:var(--green);color:#fff;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px;min-height:56px}
+header h1{font-size:22px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header button{background:rgba(255,255,255,.18);color:#fff;border:0;border-radius:10px;padding:8px 12px;font-size:17px;font-weight:600}
+main{padding:12px 12px 24px;max-width:640px;margin:0 auto}
+h2{font-size:19px;margin:22px 4px 8px;color:var(--green-dark)}
+h2 .count{font-weight:400;color:var(--muted)}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin:8px 0}
+.item{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:14px;
+  padding:12px 14px;margin:8px 0;font:inherit;color:inherit}
+.item .top{display:flex;gap:8px;align-items:flex-start}
+.item .name{flex:1;font-weight:600;font-size:19px}
+.item .sub{color:var(--muted);font-size:16px;margin-top:3px}
+.item.due{border-left:6px solid var(--amber)}
+.item.today{border-left:6px solid var(--red)}
+.tag{display:inline-block;font-size:15px;font-weight:600;border-radius:8px;padding:2px 8px;white-space:nowrap}
+.tag.cost{background:var(--amber-pale);color:var(--amber)}
+.tag.free{background:var(--green-pale);color:var(--green-dark)}
+.tag.won{background:#fff0b3;color:#6b5000}
+.tag.lost{background:#eee;color:#555}
+.stats{display:flex;gap:8px}
+.stat{flex:1;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 6px;text-align:center}
+.stat b{display:block;font-size:24px;color:var(--green-dark)}
+.stat span{font-size:14px;color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:18px 10px;font-size:17px}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;font:600 18px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--green);color:#fff;margin:8px 0;text-align:center;text-decoration:none}
+.btn.second{background:#fff;color:var(--green-dark);border:2px solid var(--green)}
+.btn.quiet{background:#eef2ed;color:var(--text)}
+.btn.danger{background:#fff;color:var(--red);border:2px solid var(--red)}
+.btn:disabled{opacity:.45}
+.btn small{display:block;font-weight:400;font-size:14px;margin-top:3px;opacity:.85}
+.row2{display:flex;gap:8px}.row2>*{flex:1}
+.big3 .btn{padding:20px 14px;font-size:20px}
+label.f{display:block;margin:14px 2px 4px;font-weight:600;font-size:17px}
+label.f .hint{font-weight:400;color:var(--muted);font-size:15px}
+input,textarea,select{width:100%;font:18px/1.3 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:12px;border:1px solid #b9c7b6;border-radius:10px;background:#fff;color:var(--text)}
+textarea{min-height:84px;resize:vertical}
+input[type=date]{min-height:48px;-webkit-appearance:none;appearance:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:2px solid var(--line);background:#fff;border-radius:22px;padding:8px 14px;font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--text)}
+.chip.on{border-color:var(--green);background:var(--green-pale);color:var(--green-dark);font-weight:600}
+.field{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #eef1ed}
+.field:last-child{border-bottom:0}
+.field .lab{font-size:15px;color:var(--muted)}
+.field .val{white-space:pre-wrap;word-break:break-word}
+.field .grow{flex:1;min-width:0}
+.copy{flex:none;border:2px solid var(--green);background:#fff;color:var(--green-dark);border-radius:10px;padding:8px 12px;font:600 16px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.prize{font-size:24px;font-weight:700;margin:4px 2px 2px}
+.note{background:var(--amber-pale);color:#5a3c00;border-radius:12px;padding:10px 12px;margin:8px 0;font-size:16px}
+.ok{background:var(--green-pale);color:var(--green-dark);border-radius:12px;padding:10px 12px;margin:8px 0;font-size:16px}
+.entries div{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eef1ed;font-size:16px}
+.linkbtn{background:none;border:0;color:var(--green-dark);font:600 17px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;text-decoration:underline;padding:10px 4px}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:#fff;border-top:1px solid var(--line);
+  display:flex;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;padding:8px 0 10px;font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#666;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button .ic{font-size:24px;line-height:1.1}
+nav button.on{color:var(--green-dark);font-weight:700}
+nav button.on .ic{transform:scale(1.1)}
+#modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center}
+#modal.show{display:flex}
+#modal .sheet{background:#fff;width:100%;max-width:640px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
+#modal h3{margin:0 0 8px;font-size:21px}
+#modal p{margin:6px 0 10px}
+#toast{position:fixed;left:12px;right:12px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:30;background:#222;color:#fff;border-radius:12px;
+  padding:12px 14px;display:none;align-items:center;gap:10px;font-size:17px;max-width:616px;margin:0 auto}
+#toast.show{display:flex}
+#toast span{flex:1}
+#toast button{background:none;border:0;color:#9be59f;font:700 17px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:4px 6px}
+.small{font-size:15px;color:var(--muted)}
+.ver{text-align:center;font-size:14px;color:#888;margin:20px 0 6px}
+</style>
+</head>
+<body>
+<header><h1 id="title">Lucky Green</h1><span id="hdrBtns"></span></header>
+<main id="main"></main>
+<nav id="nav">
+  <button data-tab="home"><span class="ic">🍀</span>Home</button>
+  <button data-tab="add"><span class="ic">➕</span>Add</button>
+  <button data-tab="wins"><span class="ic">🏆</span>Wins</button>
+  <button data-tab="shows"><span class="ic">📺</span>Game shows</button>
+  <button data-tab="me"><span class="ic">👤</span>My details</button>
+</nav>
+<div id="modal"><div class="sheet" id="sheet"></div></div>
+<div id="toast"><span id="toastText"></span><button id="toastBtn"></button></div>
+<input type="file" id="fileIn" accept=".json,application/json" style="display:none">
+
+<script>
+'use strict';
+const APP_VERSION = '2026.11.18.1';
+const STORE_KEY = 'luckygreen.v1';
+
+/* ---------- Storage (everything stays on this phone) ---------- */
+function blankData(){ return {comps:[], details:{}, stock:[], v:1}; }
+let data = load();
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return blankData();
+    const d = JSON.parse(raw);
+    return {comps:Array.isArray(d.comps)?d.comps:[], details:d.details||{}, stock:Array.isArray(d.stock)?d.stock:[], v:1, lastBackup:d.lastBackup};
+  }catch(e){ return blankData(); }
+}
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+  catch(e){ ask('Could not save', 'The phone would not let the app save just now. Please make a backup from My details.', [{t:'OK'}]); }
+}
+if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
+
+/* ---------- Small helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+function pad(n){ return String(n).padStart(2,'0'); }
+function todayStr(d){ d=d||new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function parseDay(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function daysFromToday(s){ return Math.round((parseDay(s)-parseDay(todayStr()))/86400000); }
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_LONG=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function niceDate(s){ if(!s) return ''; const d=parseDay(s); const y=d.getFullYear()!==new Date().getFullYear()?' '+d.getFullYear():''; return DAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()]+y; }
+function relDay(s){ const n=daysFromToday(s); return n===0?' (today)':n===1?' (tomorrow)':n>1?' (in '+n+' days)':n===-1?' (yesterday)':' ('+(-n)+' days ago)'; }
+function closesText(s){
+  if(!s) return 'No closing date';
+  const n=daysFromToday(s);
+  if(n<0) return 'Closed '+niceDate(s);
+  if(n===0) return 'Closes today';
+  if(n===1) return 'Closes tomorrow';
+  if(n<7) return 'Closes '+DAYS[parseDay(s).getDay()]+' (in '+n+' days)';
+  return 'Closes '+niceDate(s);
+}
+function toPence(str){
+  if(str==null) return 0;
+  const s=String(str).replace(/[£,\s]/g,'');
+  if(s==='') return 0;
+  if(/^\d+p$/i.test(s)) return parseInt(s,10);
+  const n=parseFloat(s); if(isNaN(n)||n<0) return 0;
+  return Math.round(n*100);
+}
+function money(p){ p=p||0; return '£'+(p/100).toFixed(2).replace(/\.00$/,''); }
+function moneyExact(p){ return '£'+((p||0)/100).toFixed(2); }
+function penceToInput(p){ return p? (p/100).toFixed(2).replace(/\.00$/,'') : ''; }
+
+const HOW = {online:'Online', text:'Text', phone:'Phone call', post:'Post', email:'Email', other:'Other'};
+const HOW_ICON = {online:'🌐', text:'💬', phone:'📞', post:'✉️', email:'📧', other:'📝'};
+const OFTEN = {once:'Once only', daily:'Once a day', weekly:'Once a week', any:'As often as I like'};
+const SEEN = ['Newspaper','Magazine','Radio','TV','Website','Social media','Shop','Other'];
+
+/* ---------- Comp state ---------- */
+function lastEntry(c){ return c.entries&&c.entries.length ? c.entries[c.entries.length-1].date : null; }
+function isClosed(c){ return c.closes && daysFromToday(c.closes)<0; }
+function canEnterNow(c){
+  if(c.outcome || isClosed(c)) return false;
+  const last=lastEntry(c);
+  if(!last) return true;
+  if(c.often==='daily') return last!==todayStr();
+  if(c.often==='weekly') return daysFromToday(last)<=-7;
+  if(c.often==='any') return true;
+  return false;
+}
+function stateOf(c){
+  if(c.outcome==='won') return 'won';
+  if(c.outcome==='lost') return 'lost';
+  if(canEnterNow(c)) return 'toenter';
+  if(c.entries&&c.entries.length) return 'waiting';
+  return 'missed';
+}
+function resultsDue(c){ return stateOf(c)==='waiting' && c.resultsBy && daysFromToday(c.resultsBy)<=0; }
+function compById(id){ return data.comps.find(c=>c.id===id); }
+
+/* ---------- Toast & modal ---------- */
+let toastTimer=null;
+function toast(text, actionText, action){
+  $('#toastText').textContent=text;
+  const b=$('#toastBtn');
+  if(actionText){ b.textContent=actionText; b.style.display=''; b.onclick=()=>{ hideToast(); action(); }; }
+  else { b.style.display='none'; b.onclick=null; }
+  $('#toast').classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(hideToast, actionText?6000:2200);
+}
+function hideToast(){ $('#toast').classList.remove('show'); }
+
+function ask(title, text, buttons, extraHtml){
+  return new Promise(res=>{
+    const sh=$('#sheet');
+    sh.innerHTML='<h3>'+esc(title)+'</h3>'+(text?'<p>'+esc(text)+'</p>':'')+(extraHtml||'')+
+      buttons.map((b,i)=>'<button class="btn '+(b.cls||'')+'" data-i="'+i+'">'+esc(b.t)+'</button>').join('');
+    sh.querySelectorAll('button[data-i]').forEach(btn=>btn.onclick=()=>{
+      const b=buttons[+btn.dataset.i]; const out = b.read ? b.read(sh) : (b.v!==undefined?b.v:+btn.dataset.i);
+      closeModal(); res(out);
+    });
+    $('#modal').classList.add('show');
+    const first=sh.querySelector('input,textarea'); if(first) setTimeout(()=>first.focus(),50);
+  });
+}
+function closeModal(){ $('#modal').classList.remove('show'); $('#sheet').innerHTML=''; }
+
+/* ---------- Copy ---------- */
+async function copyText(t, what){
+  if(!t){ toast('Nothing to copy yet'); return; }
+  let ok=false;
+  try{ await navigator.clipboard.writeText(t); ok=true; }catch(e){}
+  if(!ok){
+    const ta=document.createElement('textarea'); ta.value=t; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0,t.length);
+    try{ ok=document.execCommand('copy'); }catch(e){}
+    ta.remove();
+  }
+  toast(ok?(what?what+' copied':'Copied'):'Could not copy, sorry');
+}
+
+/* ---------- Navigation ---------- */
+let tab='home', view=null; // view = {type:'comp', id} | {type:'edit', id|null, preset} | {type:'finished'} ...
+function go(t){ tab=t; view=null; render(); window.scrollTo(0,0); }
+function open(v){ view=v; render(); window.scrollTo(0,0); }
+$('#nav').addEventListener('click', e=>{ const b=e.target.closest('button[data-tab]'); if(b) go(b.dataset.tab); });
+function setHeader(title, btns){
+  $('#title').textContent=title;
+  const h=$('#hdrBtns'); h.innerHTML='';
+  (btns||[]).forEach(b=>{ const el=document.createElement('button'); el.textContent=b.t; el.onclick=b.fn; h.appendChild(el); });
+}
+function render(){
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab));
+  const m=$('#main');
+  if(view){
+    if(view.type==='comp') return renderComp(m, view.id);
+    if(view.type==='edit') return renderEdit(m, view);
+    if(view.type==='finished') return renderFinished(m);
+    if(view.type==='stock') return renderStockEdit(m, view.id);
+  }
+  ({home:renderHome, add:renderAdd, wins:renderWins, shows:renderShows, me:renderMe})[tab](m);
+}
+
+/* ---------- Home ---------- */
+function compItem(c, extraClass){
+  const st=stateOf(c);
+  let tag='';
+  if(st==='won') tag='<span class="tag won">Won'+(c.wonValue?' '+money(c.wonValue):'')+'</span>';
+  else if(st==='lost') tag='<span class="tag lost">Not this time</span>';
+  else if(c.cost) tag='<span class="tag cost">'+moneyExact(c.cost)+'</span>';
+  else tag='<span class="tag free">Free</span>';
+  let sub=[];
+  if(st==='toenter'){ sub.push(closesText(c.closes)); }
+  else if(st==='waiting'){ sub.push(c.resultsBy ? (daysFromToday(c.resultsBy)<=0?'Results due – check your email':'Results by '+niceDate(c.resultsBy)) : (c.closes?closesText(c.closes):'Entered')); }
+  else if(st==='missed'){ sub.push('Closed before you entered'); }
+  sub.push(HOW_ICON[c.how||'other']+' '+HOW[c.how||'other']);
+  if(c.often && c.often!=='once') sub.push(OFTEN[c.often]);
+  const n=(c.entries||[]).length; if(n>1) sub.push('Entered '+n+' times');
+  return '<button class="item '+(extraClass||'')+'" data-comp="'+c.id+'"><div class="top"><div class="name">'+esc(c.prize||'(no prize name)')+'</div>'+tag+'</div>'+
+    '<div class="sub">'+esc(sub.join(' · '))+'</div></button>';
+}
+function bindItems(m){ m.querySelectorAll('[data-comp]').forEach(b=>b.onclick=()=>open({type:'comp', id:b.dataset.comp})); }
+function monthStats(){
+  const now=new Date(), ym=now.getFullYear()+'-'+pad(now.getMonth()+1);
+  let entries=0, spent=0, wins=0;
+  data.comps.forEach(c=>{
+    (c.entries||[]).forEach(e=>{ if(e.date.slice(0,7)===ym){ entries++; spent+=e.cost||0; } });
+    if(c.outcome==='won' && (c.outcomeDate||'').slice(0,7)===ym) wins++;
+  });
+  return {entries, spent, wins, name:MONTHS_LONG[now.getMonth()]};
+}
+function renderHome(m){
+  setHeader('Lucky Green');
+  const s=monthStats();
+  const toEnter=data.comps.filter(c=>stateOf(c)==='toenter');
+  const byClose=(a,b)=>(a.closes||'9999')<(b.closes||'9999')?-1:(a.closes||'9999')>(b.closes||'9999')?1:0;
+  toEnter.sort(byClose);
+  const today=toEnter.filter(c=>c.closes&&daysFromToday(c.closes)===0);
+  const week=toEnter.filter(c=>c.closes&&daysFromToday(c.closes)>=1&&daysFromToday(c.closes)<=7);
+  const later=toEnter.filter(c=>!c.closes||daysFromToday(c.closes)>7);
+  const waiting=data.comps.filter(c=>stateOf(c)==='waiting').sort((a,b)=>(a.resultsBy||a.closes||'9999')<(b.resultsBy||b.closes||'9999')?-1:1);
+  const due=waiting.filter(resultsDue), notDue=waiting.filter(c=>!resultsDue(c));
+  const finished=data.comps.filter(c=>['won','lost','missed'].includes(stateOf(c))).length;
+  let h='<div class="stats"><div class="stat"><b>'+s.entries+'</b><span>entered in '+s.name+'</span></div>'+
+    '<div class="stat"><b>'+s.wins+'</b><span>'+(s.wins===1?'win':'wins')+'</span></div>'+
+    '<div class="stat"><b>'+moneyExact(s.spent)+'</b><span>spent</span></div></div>';
+  if(!data.comps.length){
+    h+='<div class="card empty">No competitions yet.<br>Tap <b>➕ Add</b> at the bottom to add the first one.</div>';
+  }
+  const sec=(title, list, cls)=> list.length ? '<h2>'+title+' <span class="count">('+list.length+')</span></h2>'+list.map(c=>compItem(c,cls)).join('') : '';
+  h+=sec('Closing today', today, 'today');
+  h+=sec('Closing in the next 7 days', week);
+  h+=sec('Closing later', later);
+  h+=sec('Results due – check your email', due, 'due');
+  h+=sec('Waiting for results', notDue);
+  if(finished) h+='<button class="btn quiet" id="finBtn" style="margin-top:22px">Finished comps ('+finished+')</button>';
+  m.innerHTML=h; bindItems(m);
+  const fb=$('#finBtn'); if(fb) fb.onclick=()=>open({type:'finished'});
+}
+let finishedShown=40;
+function renderFinished(m){
+  setHeader('Finished comps', [{t:'‹ Back', fn:()=>{ view=null; render(); }}]);
+  const list=data.comps.filter(c=>['won','lost','missed'].includes(stateOf(c)))
+    .sort((a,b)=>(b.outcomeDate||lastEntry(b)||b.closes||'')<(a.outcomeDate||lastEntry(a)||a.closes||'')?-1:1);
+  let h='<p class="small" style="margin:4px">Wins, comps that didn\'t come off, and ones that closed before you entered. Newest first.</p>';
+  h+=list.slice(0,finishedShown).map(c=>compItem(c)).join('') || '<div class="empty">Nothing here yet.</div>';
+  if(list.length>finishedShown) h+='<button class="btn quiet" id="moreBtn">Show more</button>';
+  m.innerHTML=h; bindItems(m);
+  const mb=$('#moreBtn'); if(mb) mb.onclick=()=>{ finishedShown+=40; render(); };
+}
+
+/* ---------- Comp card ---------- */
+function fieldRow(label, value, copyLabel){
+  if(!value) return '';
+  return '<div class="field"><div class="grow"><div class="lab">'+esc(label)+'</div><div class="val">'+esc(value)+'</div></div>'+
+    (copyLabel?'<button class="copy" data-copy="'+esc(value)+'" data-what="'+esc(copyLabel)+'">Copy</button>':'')+'</div>';
+}
+function smsLink(c){ return 'sms:'+encodeURIComponent((c.textNumber||'').replace(/\s/g,''))+'?&body='+encodeURIComponent(c.textMessage||''); }
+function renderComp(m, id){
+  const c=compById(id); if(!c){ view=null; return render(); }
+  setHeader('Competition', [{t:'‹ Back', fn:()=>{ view=null; render(); }}, {t:'Edit', fn:()=>open({type:'edit', id:c.id})}]);
+  const st=stateOf(c);
+  let h='<div class="prize">'+esc(c.prize||'(no prize name)')+'</div>';
+  const bits=[]; if(c.value) bits.push('Worth '+money(c.value)); if(c.seenIn) bits.push('Seen in: '+c.seenIn+(c.seenName?' – '+c.seenName:''));
+  if(bits.length) h+='<div class="small" style="margin:0 2px 6px">'+esc(bits.join(' · '))+'</div>';
+
+  if(st==='won') h+='<div class="ok">🏆 You won'+(c.wonWhat?': '+esc(c.wonWhat):'')+(c.wonValue?' ('+money(c.wonValue)+')':'')+'</div>';
+  if(st==='lost') h+='<div class="note">Not this time.</div>';
+  if(st==='missed') h+='<div class="note">This closed before it was entered.</div>';
+  if(st==='waiting'){
+    h+= resultsDue(c) ? '<div class="note">Results were due '+esc(niceDate(c.resultsBy))+'. Check your comps email, then tap Won or Not this time.</div>'
+                      : '<div class="ok">✓ Entered '+esc(niceDate(lastEntry(c)))+'. '+(c.resultsBy?'Results by '+esc(niceDate(c.resultsBy))+'.':'Waiting for results.')+'</div>';
+  }
+  if(st==='toenter' && lastEntry(c)) h+='<div class="ok">Last entered '+esc(niceDate(lastEntry(c)))+'. '+esc(OFTEN[c.often])+' – you can enter again.</div>';
+
+  // Question and answer
+  if(c.question||c.answer){
+    h+='<div class="card">'+fieldRow('Question', c.question)+fieldRow('Answer', c.answer, 'Answer')+'</div>';
+  }
+  const how=c.how||'other';
+  // Action buttons
+  if(st==='toenter'){
+    if(how==='online' && c.website) h+='<a class="btn" id="goBtn" href="'+esc(safeUrl(c.website))+'" target="_blank" rel="noopener">🌐 Open the website</a>';
+    if(how==='text' && c.textNumber) h+='<a class="btn" id="goBtn" href="'+esc(smsLink(c))+'">💬 Send the text'+(c.cost?'<small>Costs '+esc(moneyExact(c.cost))+'</small>':'')+'</a>';
+    if(how==='phone' && c.phoneNumber) h+='<a class="btn" id="goBtn" href="tel:'+esc(c.phoneNumber.replace(/[^\d+]/g,''))+'">📞 Ring the number'+(c.cost?'<small>Costs '+esc(moneyExact(c.cost))+'</small>':'')+'</a>';
+    if(how==='email' && c.emailTo) h+='<a class="btn" id="goBtn" href="mailto:'+esc(c.emailTo.trim())+'?subject='+encodeURIComponent(c.prize||'Competition entry')+'&body='+encodeURIComponent(c.answer?'Answer: '+c.answer+'\n\n':'')+'">📧 Write the email</a>';
+    if(how==='post' && c.postAddress) h+='<button class="btn" data-copy="'+esc(c.postAddress)+'" data-what="Address">✉️ Copy the address to send to</button>';
+    h+='<button class="btn second" id="enteredBtn">✓ I\'ve entered'+(c.cost?'<small>Adds '+esc(moneyExact(c.cost))+' to spending</small>':'')+'</button>';
+  }
+  if(st==='waiting'){
+    h+='<div class="row2"><button class="btn" id="wonBtn">🏆 Won!</button><button class="btn quiet" id="lostBtn">Not this time</button></div>';
+  }
+  if(st==='won'||st==='lost') h+='<button class="btn quiet" id="undoOutcome">Change the result</button>';
+
+  // How to enter
+  h+='<div class="card"><div class="field"><div class="grow"><div class="lab">How to enter</div><div class="val">'+HOW_ICON[how]+' '+esc(HOW[how])+
+     (c.cost?' – '+esc(moneyExact(c.cost))+' each entry':' – free')+'</div></div></div>';
+  if(how==='online') h+=fieldRow('Website', c.website, 'Link');
+  if(how==='text'){ h+=fieldRow('Text this number', c.textNumber, 'Number'); h+=fieldRow('Message to send', c.textMessage, 'Message'); }
+  if(how==='phone') h+=fieldRow('Phone number', c.phoneNumber, 'Number');
+  if(how==='post') h+=fieldRow('Send it to', c.postAddress, 'Address');
+  if(how==='email') h+=fieldRow('Email to', c.emailTo, 'Email address');
+  if(how!=='online' && c.website) h+=fieldRow('Website', c.website, 'Link');
+  h+=fieldRow('Run by', c.promoter);
+  h+=fieldRow('Closing date', c.closes?niceDate(c.closes)+relDay(c.closes):'');
+  h+=fieldRow('Results by', c.resultsBy?niceDate(c.resultsBy):'');
+  h+=fieldRow('How often you can enter', OFTEN[c.often||'once']);
+  h+=fieldRow('Notes', c.notes);
+  h+='</div>';
+
+  // Entries
+  const es=c.entries||[];
+  if(es.length){
+    h+='<h2>Entries <span class="count">('+es.length+')</span></h2><div class="card entries">'+
+      es.slice().reverse().map((e,ri)=>'<div><span>'+esc(niceDate(e.date))+'</span><span>'+(e.cost?esc(moneyExact(e.cost)):'free')+
+      ' <button class="linkbtn" style="padding:0 0 0 10px" data-rm="'+(es.length-1-ri)+'">remove</button></span></div>').join('')+'</div>';
+  }
+  m.innerHTML=h;
+  m.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText(b.dataset.copy, b.dataset.what));
+  const gb=$('#goBtn'); if(gb) gb.addEventListener('click', ()=>{ pending={id:c.id, at:Date.now()}; });
+  const eb=$('#enteredBtn'); if(eb) eb.onclick=()=>addEntry(c);
+  const wb=$('#wonBtn'); if(wb) wb.onclick=()=>markWon(c);
+  const lb=$('#lostBtn'); if(lb) lb.onclick=()=>{ c.outcome='lost'; c.outcomeDate=todayStr(); stamp(c); save(); render(); toast('Better luck next time','Undo',()=>{ delete c.outcome; delete c.outcomeDate; save(); render(); }); };
+  const ub=$('#undoOutcome'); if(ub) ub.onclick=()=>{ delete c.outcome; delete c.outcomeDate; delete c.wonWhat; delete c.wonValue; stamp(c); save(); render(); };
+  m.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{
+    const i=+b.dataset.rm, e=c.entries[i];
+    const r=await ask('Remove this entry?', niceDate(e.date)+(e.cost?' – '+moneyExact(e.cost)+' comes off your spending.':''), [{t:'Remove it', cls:'danger', v:true},{t:'Keep it', cls:'quiet', v:false}]);
+    if(r){ c.entries.splice(i,1); stamp(c); save(); render(); }
+  });
+}
+function safeUrl(u){ u=(u||'').trim(); if(!/^https?:\/\//i.test(u)) u='https://'+u; return u; }
+function stamp(c){ c.updated=new Date().toISOString(); }
+function addEntry(c){
+  c.entries=c.entries||[];
+  const e={date:todayStr(), cost:c.cost||0};
+  c.entries.push(e); stamp(c); save(); render();
+  toast('Entered'+(e.cost?' – '+moneyExact(e.cost)+' added':''), 'Undo', ()=>{ const i=c.entries.lastIndexOf(e); if(i>=0) c.entries.splice(i,1); save(); render(); });
+}
+async function markWon(c){
+  const r=await ask('Congratulations! 🎉', 'What did you win?', [
+    {t:'Save the win', read:sh=>({what:sh.querySelector('#wWhat').value.trim(), val:toPence(sh.querySelector('#wVal').value)})},
+    {t:'Cancel', cls:'quiet', v:null}],
+    '<label class="f">Prize</label><input id="wWhat" value="'+esc(c.prize||'')+'"><label class="f">Roughly worth (£) <span class="hint">optional</span></label><input id="wVal" inputmode="decimal" value="'+esc(penceToInput(c.value))+'">');
+  if(!r) return;
+  c.outcome='won'; c.outcomeDate=todayStr(); c.wonWhat=r.what; c.wonValue=r.val; stamp(c); save(); render();
+}
+
+/* "Did you enter?" when she comes back from Messages, Phone, Mail or Safari */
+let pending=null;
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState!=='visible' || !pending) return;
+  const p=pending; pending=null;
+  if(Date.now()-p.at>30*60*1000) return;
+  const c=compById(p.id); if(!c || !canEnterNow(c)) return;
+  setTimeout(async()=>{
+    const msg = c.how==='text' ? 'Did you send the text?' : c.how==='phone' ? 'Did you get through and enter?' : c.how==='email' ? 'Did you send the email?' : 'Did you enter?';
+    const r=await ask(msg, c.prize+(c.cost?' – '+moneyExact(c.cost)+' will be added to your spending.':''), [{t:'Yes, I entered', v:true},{t:'Not yet', cls:'quiet', v:false}]);
+    if(r) addEntry(c);
+  }, 400);
+});
+
+/* ---------- Add / edit ---------- */
+function renderAdd(m){
+  setHeader('Add a competition');
+  m.innerHTML='<div class="big3" style="margin-top:8px">'+
+    '<button class="btn" id="typeBtn">✏️ Type it in<small>Use the microphone on the keyboard to say it</small></button>'+
+    '<button class="btn" id="linkBtn">🔗 Paste a link<small>Copy the link in Safari first (Share, then Copy)</small></button>'+
+    '<button class="btn" disabled>📷 Snap it<small>Coming soon</small></button></div>';
+  $('#typeBtn').onclick=()=>open({type:'edit', id:null, preset:{}});
+  $('#linkBtn').onclick=async()=>{
+    let t='';
+    try{ t=(await navigator.clipboard.readText()||'').trim(); }catch(e){}
+    const mt=t.match(/https?:\/\/\S+/i);
+    if(mt){ open({type:'edit', id:null, preset:{how:'online', website:mt[0]}}); toast('Link pasted'); }
+    else { open({type:'edit', id:null, preset:{how:'online'}, focus:'website'}); toast('Paste the link into the Website box'); }
+  };
+}
+function chipsHtml(name, opts, cur){
+  return '<div class="chips" data-chips="'+name+'">'+Object.entries(opts).map(([k,v])=>'<button type="button" class="chip'+(k===cur?' on':'')+'" data-v="'+esc(k)+'">'+esc(v)+'</button>').join('')+'</div>';
+}
+function renderEdit(m, v){
+  const isNew=!v.id;
+  const c = isNew ? Object.assign({how:'online', often:'once'}, v.preset||{}) : Object.assign({}, compById(v.id));
+  if(!isNew && !compById(v.id)){ view=null; return render(); }
+  setHeader(isNew?'New competition':'Edit competition', [{t:'Cancel', fn:()=>{ view = isNew?null:{type:'comp', id:v.id}; render(); }}]);
+  const seenOpts={}; SEEN.forEach(s=>seenOpts[s]=s);
+  m.innerHTML=
+    '<label class="f">Prize <span class="hint">what you could win</span></label><input id="eprize" value="'+esc(c.prize||'')+'" placeholder="e.g. Weekend in York">'+
+    '<label class="f">Roughly worth (£) <span class="hint">optional</span></label><input id="evalue" inputmode="decimal" value="'+esc(penceToInput(c.value))+'">'+
+    '<label class="f">Seen in</label>'+chipsHtml('seenIn', seenOpts, c.seenIn)+
+    '<input id="eseenName" style="margin-top:8px" value="'+esc(c.seenName||'')+'" placeholder="Which one? e.g. Daily Mail, Radio 2">'+
+    '<label class="f">Question</label><textarea id="equestion" placeholder="If there is one">'+esc(c.question||'')+'</textarea>'+
+    '<label class="f">Your answer</label><input id="eanswer" value="'+esc(c.answer||'')+'">'+
+    '<label class="f">How to enter</label>'+chipsHtml('how', HOW, c.how)+
+    '<div id="howFields"></div>'+
+    '<label class="f">Cost of each entry (£) <span class="hint">leave empty if free</span></label><input id="ecost" inputmode="decimal" value="'+esc(penceToInput(c.cost))+'" placeholder="e.g. 1.50">'+
+    '<label class="f">Closing date</label><input id="ecloses" type="date" value="'+esc(c.closes||'')+'">'+
+    '<label class="f">Results by <span class="hint">if it says</span></label><input id="eresults" type="date" value="'+esc(c.resultsBy||'')+'">'+
+    '<label class="f">How often can you enter?</label>'+chipsHtml('often', OFTEN, c.often||'once')+
+    '<label class="f">Run by <span class="hint">the company, if it says</span></label><input id="epromoter" value="'+esc(c.promoter||'')+'">'+
+    '<label class="f">Notes</label><textarea id="enotes">'+esc(c.notes||'')+'</textarea>'+
+    '<button class="btn" id="saveBtn" style="margin-top:18px">Save</button>'+
+    (isNew?'':'<button class="btn danger" id="delBtn" style="margin-top:26px">Delete this competition</button>');
+  const chosen={seenIn:c.seenIn||'', how:c.how||'online', often:c.often||'once'};
+  // keep the how-specific values while switching between choices
+  const howVals={website:c.website||'', textNumber:c.textNumber||'', textMessage:c.textMessage||'', phoneNumber:c.phoneNumber||'', postAddress:c.postAddress||'', emailTo:c.emailTo||''};
+  function grabHow(){ ['website','textNumber','textMessage','phoneNumber','postAddress','emailTo'].forEach(k=>{ const el=$('#h_'+k); if(el) howVals[k]=el.value; }); }
+  function drawHow(){
+    const f=(k,label,hint,attrs,ta)=>'<label class="f">'+label+(hint?' <span class="hint">'+hint+'</span>':'')+'</label>'+
+      (ta?'<textarea id="h_'+k+'">'+esc(howVals[k])+'</textarea>':'<input id="h_'+k+'" '+(attrs||'')+' value="'+esc(howVals[k])+'">');
+    let h='';
+    const how=chosen.how;
+    if(how==='online') h+=f('website','Website','paste the link','inputmode="url" autocapitalize="off" autocorrect="off"');
+    if(how==='text') h+=f('textNumber','Text this number','','inputmode="tel"')+f('textMessage','Message to send','e.g. WIN followed by your answer','autocapitalize="characters"');
+    if(how==='phone') h+=f('phoneNumber','Phone number','','inputmode="tel"');
+    if(how==='post') h+=f('postAddress','Send it to','the address on the entry','',true);
+    if(how==='email') h+=f('emailTo','Email to','','inputmode="email" autocapitalize="off" autocorrect="off"');
+    if(how!=='online') h+=f('website','Website','optional, for the rules','inputmode="url" autocapitalize="off" autocorrect="off"');
+    $('#howFields').innerHTML=h;
+  }
+  drawHow();
+  m.querySelectorAll('[data-chips]').forEach(box=>{
+    box.onclick=e=>{
+      const b=e.target.closest('.chip'); if(!b) return;
+      const name=box.dataset.chips;
+      if(name==='how') grabHow();
+      chosen[name] = (name==='seenIn' && chosen[name]===b.dataset.v) ? '' : b.dataset.v;
+      box.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on', x.dataset.v===chosen[name]));
+      if(name==='how') drawHow();
+    };
+  });
+  if(v.focus){ const el=$('#h_'+v.focus); if(el) setTimeout(()=>el.focus(),100); }
+  $('#saveBtn').onclick=()=>{
+    grabHow();
+    const prize=$('#eprize').value.trim();
+    if(!prize){ toast('Please put in the prize first'); $('#eprize').focus(); return; }
+    const closes=$('#ecloses').value, resultsBy=$('#eresults').value;
+    const out = isNew ? {id:uid(), created:new Date().toISOString(), entries:[]} : compById(v.id);
+    Object.assign(out, {
+      prize, value:toPence($('#evalue').value), seenIn:chosen.seenIn, seenName:$('#eseenName').value.trim(),
+      question:$('#equestion').value.trim(), answer:$('#eanswer').value.trim(),
+      how:chosen.how, cost:toPence($('#ecost').value), closes, resultsBy, often:chosen.often,
+      promoter:$('#epromoter').value.trim(), notes:$('#enotes').value.trim()
+    });
+    // keep only the contact details that belong to the chosen way of entering (plus a website for the rules)
+    out.website=howVals.website.trim();
+    out.textNumber = chosen.how==='text' ? howVals.textNumber.trim() : '';
+    out.textMessage = chosen.how==='text' ? howVals.textMessage.trim() : '';
+    out.phoneNumber = chosen.how==='phone' ? howVals.phoneNumber.trim() : '';
+    out.postAddress = chosen.how==='post' ? howVals.postAddress.trim() : '';
+    out.emailTo = chosen.how==='email' ? howVals.emailTo.trim() : '';
+    stamp(out);
+    if(isNew) data.comps.push(out);
+    save();
+    toast(isNew?'Competition added':'Saved');
+    tab = isNew ? 'home' : tab;
+    open({type:'comp', id:out.id});
+  };
+  const db=$('#delBtn');
+  if(db) db.onclick=async()=>{
+    const r=await ask('Delete this competition?', 'It will be removed completely, including its entries and any win.', [{t:'Delete it', cls:'danger', v:true},{t:'Keep it', cls:'quiet', v:false}]);
+    if(r){ data.comps=data.comps.filter(x=>x.id!==v.id); save(); toast('Deleted'); go('home'); }
+  };
+}
+
+/* ---------- Wins & spending ---------- */
+function renderWins(m){
+  setHeader('Wins and spending');
+  const yr=String(new Date().getFullYear());
+  const wins=data.comps.filter(c=>c.outcome==='won').sort((a,b)=>(b.outcomeDate||'')<(a.outcomeDate||'')?-1:1);
+  const winsYr=wins.filter(c=>(c.outcomeDate||'').startsWith(yr));
+  let spentYr=0, paidYr=0, spentAll=0;
+  const byMonth={};
+  data.comps.forEach(c=>(c.entries||[]).forEach(e=>{
+    spentAll+=e.cost||0;
+    if(e.date.startsWith(yr) && e.cost){ spentYr+=e.cost; paidYr++; }
+    if(e.cost){ const k=e.date.slice(0,7); byMonth[k]=byMonth[k]||{p:0,n:0}; byMonth[k].p+=e.cost; byMonth[k].n++; }
+  }));
+  const wonYr=winsYr.reduce((s,c)=>s+(c.wonValue||0),0), wonAll=wins.reduce((s,c)=>s+(c.wonValue||0),0);
+  let h='<h2>'+yr+' so far</h2><div class="stats">'+
+    '<div class="stat"><b>'+winsYr.length+'</b><span>'+(winsYr.length===1?'win':'wins')+'</span></div>'+
+    '<div class="stat"><b>'+money(wonYr)+'</b><span>won</span></div>'+
+    '<div class="stat"><b>'+moneyExact(spentYr)+'</b><span>spent ('+paidYr+' paid)</span></div></div>';
+  h+='<h2>Wins <span class="count">('+wins.length+')</span></h2>';
+  h+= wins.length ? wins.map(c=>'<button class="item" data-comp="'+c.id+'"><div class="top"><div class="name">'+esc(c.wonWhat||c.prize)+'</div>'+
+      (c.wonValue?'<span class="tag won">'+money(c.wonValue)+'</span>':'')+'</div><div class="sub">'+esc(niceDate(c.outcomeDate))+(c.seenName?' · '+esc(c.seenName):'')+'</div></button>').join('')
+    : '<div class="card empty">No wins yet – fingers crossed!</div>';
+  const months=Object.keys(byMonth).sort().reverse().slice(0,12);
+  h+='<h2>Spending on paid entries</h2>';
+  h+= months.length ? '<div class="card entries">'+months.map(k=>{ const [y,mo]=k.split('-'); return '<div><span>'+MONTHS_LONG[+mo-1]+' '+y+'</span><span>'+moneyExact(byMonth[k].p)+' ('+byMonth[k].n+')</span></div>'; }).join('')+'</div>'
+    : '<div class="card empty">No paid entries yet.</div>';
+  if(wins.length||spentAll) h+='<p class="small" style="margin:12px 4px">All time: won '+money(wonAll)+', spent '+moneyExact(spentAll)+'.</p>';
+  m.innerHTML=h; bindItems(m);
+}
+
+/* ---------- Game shows ---------- */
+const STOCK_SUGGEST=['About me','My hobbies','A funny story','Why I\'d be good on the show','What I\'d do with the money','Something surprising about me'];
+function renderShows(m){
+  setHeader('Game shows');
+  let h='<p class="small" style="margin:4px">Answers you use again and again on application forms. Tap Copy, then paste into the form.</p>';
+  h+= data.stock.length ? data.stock.map(s=>'<div class="card"><div class="field"><div class="grow"><div class="lab">'+esc(s.label)+'</div><div class="val">'+esc(s.text)+'</div></div>'+
+      '<button class="copy" data-copy="'+esc(s.text)+'" data-what="'+esc(s.label)+'">Copy</button></div>'+
+      '<button class="linkbtn" data-edit="'+s.id+'">Change</button></div>').join('')
+    : '<div class="card empty">No answers saved yet.</div>';
+  h+='<button class="btn" id="addStock">➕ Add an answer</button>';
+  h+='<h2>Shows looking for contestants</h2>'+
+    '<a class="btn second" href="https://www.itv.com/beontv" target="_blank" rel="noopener">ITV – Be on TV</a>'+
+    '<a class="btn second" href="https://www.bbc.co.uk/takepart" target="_blank" rel="noopener">BBC – Take part</a>'+
+    '<a class="btn second" href="https://www.channel4.com/takepart" target="_blank" rel="noopener">Channel 4 – Take part</a>';
+  m.innerHTML=h;
+  m.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText(b.dataset.copy, b.dataset.what));
+  m.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>open({type:'stock', id:b.dataset.edit}));
+  $('#addStock').onclick=()=>open({type:'stock', id:null});
+}
+function renderStockEdit(m, id){
+  const s = id ? data.stock.find(x=>x.id===id) : {label:'', text:''};
+  if(!s){ view=null; return render(); }
+  setHeader(id?'Change answer':'New answer', [{t:'Cancel', fn:()=>{ view=null; render(); }}]);
+  m.innerHTML='<label class="f">What it\'s for</label><input id="slabel" value="'+esc(s.label)+'" placeholder="e.g. About me">'+
+    (id?'':'<div class="chips" style="margin-top:8px">'+STOCK_SUGGEST.map(x=>'<button type="button" class="chip" data-s="'+esc(x)+'">'+esc(x)+'</button>').join('')+'</div>')+
+    '<label class="f">Your answer</label><textarea id="stext" style="min-height:180px">'+esc(s.text)+'</textarea>'+
+    '<button class="btn" id="sSave" style="margin-top:16px">Save</button>'+
+    (id?'<button class="btn danger" id="sDel" style="margin-top:26px">Delete this answer</button>':'');
+  m.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ $('#slabel').value=b.dataset.s; $('#stext').focus(); });
+  $('#sSave').onclick=()=>{
+    const label=$('#slabel').value.trim(), text=$('#stext').value.trim();
+    if(!label||!text){ toast('Please fill in both boxes'); return; }
+    if(id){ s.label=label; s.text=text; } else data.stock.push({id:uid(), label, text});
+    save(); toast('Saved'); view=null; render();
+  };
+  const d=$('#sDel'); if(d) d.onclick=async()=>{
+    const r=await ask('Delete this answer?', s.label, [{t:'Delete it', cls:'danger', v:true},{t:'Keep it', cls:'quiet', v:false}]);
+    if(r){ data.stock=data.stock.filter(x=>x.id!==id); save(); toast('Deleted'); view=null; render(); }
+  };
+}
+
+/* ---------- My details + backup ---------- */
+const DETAILS=[
+  ['name','Full name','',''],
+  ['address','Address','','ta'],
+  ['postcode','Postcode','','autocapitalize="characters"'],
+  ['email','Comps email','','inputmode="email" autocapitalize="off" autocorrect="off"'],
+  ['phone','Phone','','inputmode="tel"'],
+  ['dob','Date of birth','some comps ask','']
+];
+let editingDetails=false;
+function renderMe(m){
+  setHeader('My details', editingDetails?[]:[{t:'Change', fn:()=>{ editingDetails=true; render(); }}]);
+  const d=data.details;
+  let h='';
+  if(editingDetails){
+    h+='<p class="small" style="margin:4px">These stay on this phone. They\'re here to copy into entry forms.</p>';
+    h+=DETAILS.map(([k,label,hint,a])=>'<label class="f">'+label+(hint?' <span class="hint">'+hint+'</span>':'')+'</label>'+
+      (a==='ta'?'<textarea id="d_'+k+'">'+esc(d[k]||'')+'</textarea>':'<input id="d_'+k+'" '+a+' value="'+esc(d[k]||'')+'">')).join('');
+    h+='<button class="btn" id="dSave" style="margin-top:16px">Save</button><button class="btn quiet" id="dCancel">Cancel</button>';
+    m.innerHTML=h;
+    $('#dSave').onclick=()=>{ DETAILS.forEach(([k])=>{ data.details[k]=$('#d_'+k).value.trim(); }); save(); editingDetails=false; toast('Saved'); render(); };
+    $('#dCancel').onclick=()=>{ editingDetails=false; render(); };
+    return;
+  }
+  const any=DETAILS.some(([k])=>d[k]);
+  h+='<div class="card">'+(any ? DETAILS.map(([k,label])=>fieldRow(label, d[k], label)).join('') : '<div class="empty">Tap <b>Change</b> at the top to put your details in.</div>')+'</div>';
+  if(d.name||d.address) h+='<button class="btn second" id="copyAddr">Copy name and address together</button>';
+  h+='<h2>Keep a copy safe</h2><div class="card"><p style="margin:0 0 6px">Save a backup now and then, and keep it in Files or iCloud. If the phone is lost or replaced, load it back in.</p>'+
+    '<button class="btn" id="bSave">Save a backup</button><button class="btn quiet" id="bLoad">Load a backup</button>'+
+    (data.lastBackup?'<p class="small" style="margin:6px 0 0">Last backup: '+esc(niceDate(data.lastBackup))+'</p>':'')+'</div>';
+  h+='<div class="ver">Lucky Green · version '+APP_VERSION+'</div>';
+  m.innerHTML=h;
+  m.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText(b.dataset.copy, b.dataset.what));
+  const ca=$('#copyAddr'); if(ca) ca.onclick=()=>copyText([d.name,d.address,d.postcode].filter(Boolean).join('\n'), 'Name and address');
+  $('#bSave').onclick=saveBackup;
+  $('#bLoad').onclick=()=>{ $('#fileIn').value=''; $('#fileIn').click(); };
+}
+async function saveBackup(){
+  data.lastBackup=todayStr(); save();
+  const json=JSON.stringify({app:'Lucky Green', version:APP_VERSION, saved:new Date().toISOString(), data}, null, 1);
+  const name='lucky-green-backup-'+todayStr()+'.json';
+  const file=new File([json], name, {type:'application/json'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:name}); toast('Backup ready'); render(); return; }
+    catch(e){ if(e && e.name==='AbortError'){ render(); return; } }
+  }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(file); a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+  toast('Backup saved'); render();
+}
+$('#fileIn').addEventListener('change', async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  let obj=null;
+  try{ obj=JSON.parse(await f.text()); }catch(err){}
+  if(!obj || obj.app!=='Lucky Green' || !obj.data || !Array.isArray(obj.data.comps)){
+    ask('That isn\'t a Lucky Green backup', 'Please choose a file whose name starts with lucky-green-backup.', [{t:'OK'}]); return;
+  }
+  const when=obj.saved?niceDate(todayStr(new Date(obj.saved))):'an unknown date';
+  const r=await ask('Load this backup?', 'It\'s from '+when+' with '+obj.data.comps.length+' competitions. It will replace everything in the app now.', [{t:'Yes, replace everything', cls:'danger', v:true},{t:'Cancel', cls:'quiet', v:false}]);
+  if(!r) return;
+  data={comps:obj.data.comps, details:obj.data.details||{}, stock:Array.isArray(obj.data.stock)?obj.data.stock:[], v:1, lastBackup:obj.data.lastBackup};
+  save(); toast('Backup loaded'); go('home');
+});
+
+/* ---------- Start ---------- */
+render();
+// re-check dates when the app comes back after midnight
+let lastDay=todayStr();
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && todayStr()!==lastDay){ lastDay=todayStr(); if(!$('#modal').classList.contains('show') && !(view&&view.type==='edit')) render(); } });
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+</script>
+</body>
+</html>
