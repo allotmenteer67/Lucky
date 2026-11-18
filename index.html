@@ -113,7 +113,7 @@ nav button.on .ic{transform:scale(1.1)}
 
 <script>
 'use strict';
-const APP_VERSION = '2026.11.18.6';
+const APP_VERSION = '2026.11.18.7';
 const STORE_KEY = 'luckygreen.v1';
 
 /* ---------- Storage (everything stays on this phone) ---------- */
@@ -397,12 +397,12 @@ function renderComp(m, id, inRound){
 
   // Question and answer
   if(c.question||c.answer){
-    h+='<div class="card">'+fieldRow('Question', c.question)+fieldRow('Answer', c.answer, 'Answer')+'</div>';
+    h+='<div class="card">'+fieldRow('Question', c.question)+fieldRow(c.answerSuggested?'Suggested answer – check it':'Answer', c.answer, 'Answer')+'</div>';
   }
   const how=c.how||'other';
   // Action buttons
   if(st==='toenter'){
-    if(how==='online' && c.website) h+='<a class="btn" id="goBtn" href="'+esc(safeUrl(c.website))+'" target="_blank" rel="noopener">🌐 Open the website</a>';
+    if(how==='online' && c.website) h+='<a class="btn" id="goBtn" href="'+esc(safeUrl(c.website))+'" target="_blank" rel="noopener">🌐 Open the website'+(c.answer?'<small>Copies your answer: '+esc(c.answer.length>30?c.answer.slice(0,30)+'…':c.answer)+'</small>':'')+'</a>';
     if(how==='text' && c.textNumber) h+='<a class="btn" id="goBtn" href="'+esc(smsLink(c))+'">💬 Send the text'+(c.cost?'<small>Costs '+esc(moneyExact(c.cost))+'</small>':'')+'</a>';
     if(how==='phone' && c.phoneNumber) h+='<a class="btn" id="goBtn" href="tel:'+esc(c.phoneNumber.replace(/[^\d+]/g,''))+'">📞 Ring the number'+(c.cost?'<small>Costs '+esc(moneyExact(c.cost))+'</small>':'')+'</a>';
     if(how==='email' && c.emailTo) h+='<a class="btn" id="goBtn" href="mailto:'+esc(c.emailTo.trim())+'?subject='+encodeURIComponent(c.prize||'Competition entry')+'&body='+encodeURIComponent(c.answer?'Answer: '+c.answer+'\n\n':'')+'">📧 Write the email</a>';
@@ -440,7 +440,11 @@ function renderComp(m, id, inRound){
   }
   m.innerHTML=h;
   m.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText(b.dataset.copy, b.dataset.what));
-  const gb=$('#goBtn'); if(gb) gb.addEventListener('click', ()=>{ pending={id:c.id, at:Date.now()}; });
+  const gb=$('#goBtn'); if(gb) gb.addEventListener('click', ()=>{
+    pending={id:c.id, at:Date.now()};
+    // online entries: put the answer on the clipboard so she can paste it straight into the form
+    if(how==='online' && c.answer){ try{ navigator.clipboard.writeText(c.answer).catch(()=>{}); }catch(e){} }
+  });
   const eb=$('#enteredBtn'); if(eb) eb.onclick=()=>addEntry(c);
   const sb=$('#skipBtn'); if(sb) sb.onclick=()=>roundNext(false);
   const wb=$('#wonBtn'); if(wb) wb.onclick=()=>markWon(c);
@@ -567,6 +571,7 @@ function renderEdit(m, v){
     if(!prize){ toast('Please put in the prize first'); $('#eprize').focus(); return; }
     const closes=$('#ecloses').value, resultsBy=$('#eresults').value;
     const out = isNew ? {id:uid(), created:new Date().toISOString(), entries:[]} : compById(v.id);
+    if(out.answerSuggested && $('#eanswer').value.trim()!==(out.answer||'')) out.answerSuggested=false;
     Object.assign(out, {
       prize, value:toPence($('#evalue').value), seenIn:chosen.seenIn, seenName:$('#eseenName').value.trim(),
       question:$('#equestion').value.trim(), answer:$('#eanswer').value.trim(),
