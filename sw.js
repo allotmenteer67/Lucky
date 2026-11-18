@@ -1,6 +1,6 @@
 // Lucky Green service worker: keeps the app working offline.
 // Change VERSION with every update so phones pick up the new files.
-const VERSION = 'lucky-green-2026.11.18.1';
+const VERSION = 'lucky-green-2026.11.18.2';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

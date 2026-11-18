@@ -101,7 +101,6 @@ nav button.on .ic{transform:scale(1.1)}
   <button data-tab="home"><span class="ic">🍀</span>Home</button>
   <button data-tab="add"><span class="ic">➕</span>Add</button>
   <button data-tab="wins"><span class="ic">🏆</span>Wins</button>
-  <button data-tab="shows"><span class="ic">📺</span>Game shows</button>
   <button data-tab="me"><span class="ic">👤</span>My details</button>
 </nav>
 <div id="modal"><div class="sheet" id="sheet"></div></div>
@@ -110,18 +109,18 @@ nav button.on .ic{transform:scale(1.1)}
 
 <script>
 'use strict';
-const APP_VERSION = '2026.11.18.1';
+const APP_VERSION = '2026.11.18.2';
 const STORE_KEY = 'luckygreen.v1';
 
 /* ---------- Storage (everything stays on this phone) ---------- */
-function blankData(){ return {comps:[], details:{}, stock:[], v:1}; }
+function blankData(){ return {comps:[], details:{}, v:1}; }
 let data = load();
 function load(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
     if(!raw) return blankData();
     const d = JSON.parse(raw);
-    return {comps:Array.isArray(d.comps)?d.comps:[], details:d.details||{}, stock:Array.isArray(d.stock)?d.stock:[], v:1, lastBackup:d.lastBackup};
+    return {comps:Array.isArray(d.comps)?d.comps:[], details:d.details||{}, v:1, lastBackup:d.lastBackup};
   }catch(e){ return blankData(); }
 }
 function save(){
@@ -248,9 +247,8 @@ function render(){
     if(view.type==='comp') return renderComp(m, view.id);
     if(view.type==='edit') return renderEdit(m, view);
     if(view.type==='finished') return renderFinished(m);
-    if(view.type==='stock') return renderStockEdit(m, view.id);
   }
-  ({home:renderHome, add:renderAdd, wins:renderWins, shows:renderShows, me:renderMe})[tab](m);
+  ({home:renderHome, add:renderAdd, wins:renderWins, me:renderMe})[tab](m);
 }
 
 /* ---------- Home ---------- */
@@ -565,47 +563,6 @@ function renderWins(m){
   m.innerHTML=h; bindItems(m);
 }
 
-/* ---------- Game shows ---------- */
-const STOCK_SUGGEST=['About me','My hobbies','A funny story','Why I\'d be good on the show','What I\'d do with the money','Something surprising about me'];
-function renderShows(m){
-  setHeader('Game shows');
-  let h='<p class="small" style="margin:4px">Answers you use again and again on application forms. Tap Copy, then paste into the form.</p>';
-  h+= data.stock.length ? data.stock.map(s=>'<div class="card"><div class="field"><div class="grow"><div class="lab">'+esc(s.label)+'</div><div class="val">'+esc(s.text)+'</div></div>'+
-      '<button class="copy" data-copy="'+esc(s.text)+'" data-what="'+esc(s.label)+'">Copy</button></div>'+
-      '<button class="linkbtn" data-edit="'+s.id+'">Change</button></div>').join('')
-    : '<div class="card empty">No answers saved yet.</div>';
-  h+='<button class="btn" id="addStock">➕ Add an answer</button>';
-  h+='<h2>Shows looking for contestants</h2>'+
-    '<a class="btn second" href="https://www.itv.com/beontv" target="_blank" rel="noopener">ITV – Be on TV</a>'+
-    '<a class="btn second" href="https://www.bbc.co.uk/takepart" target="_blank" rel="noopener">BBC – Take part</a>'+
-    '<a class="btn second" href="https://www.channel4.com/takepart" target="_blank" rel="noopener">Channel 4 – Take part</a>';
-  m.innerHTML=h;
-  m.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText(b.dataset.copy, b.dataset.what));
-  m.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>open({type:'stock', id:b.dataset.edit}));
-  $('#addStock').onclick=()=>open({type:'stock', id:null});
-}
-function renderStockEdit(m, id){
-  const s = id ? data.stock.find(x=>x.id===id) : {label:'', text:''};
-  if(!s){ view=null; return render(); }
-  setHeader(id?'Change answer':'New answer', [{t:'Cancel', fn:()=>{ view=null; render(); }}]);
-  m.innerHTML='<label class="f">What it\'s for</label><input id="slabel" value="'+esc(s.label)+'" placeholder="e.g. About me">'+
-    (id?'':'<div class="chips" style="margin-top:8px">'+STOCK_SUGGEST.map(x=>'<button type="button" class="chip" data-s="'+esc(x)+'">'+esc(x)+'</button>').join('')+'</div>')+
-    '<label class="f">Your answer</label><textarea id="stext" style="min-height:180px">'+esc(s.text)+'</textarea>'+
-    '<button class="btn" id="sSave" style="margin-top:16px">Save</button>'+
-    (id?'<button class="btn danger" id="sDel" style="margin-top:26px">Delete this answer</button>':'');
-  m.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ $('#slabel').value=b.dataset.s; $('#stext').focus(); });
-  $('#sSave').onclick=()=>{
-    const label=$('#slabel').value.trim(), text=$('#stext').value.trim();
-    if(!label||!text){ toast('Please fill in both boxes'); return; }
-    if(id){ s.label=label; s.text=text; } else data.stock.push({id:uid(), label, text});
-    save(); toast('Saved'); view=null; render();
-  };
-  const d=$('#sDel'); if(d) d.onclick=async()=>{
-    const r=await ask('Delete this answer?', s.label, [{t:'Delete it', cls:'danger', v:true},{t:'Keep it', cls:'quiet', v:false}]);
-    if(r){ data.stock=data.stock.filter(x=>x.id!==id); save(); toast('Deleted'); view=null; render(); }
-  };
-}
-
 /* ---------- My details + backup ---------- */
 const DETAILS=[
   ['name','Full name','',''],
@@ -666,7 +623,7 @@ $('#fileIn').addEventListener('change', async e=>{
   const when=obj.saved?niceDate(todayStr(new Date(obj.saved))):'an unknown date';
   const r=await ask('Load this backup?', 'It\'s from '+when+' with '+obj.data.comps.length+' competitions. It will replace everything in the app now.', [{t:'Yes, replace everything', cls:'danger', v:true},{t:'Cancel', cls:'quiet', v:false}]);
   if(!r) return;
-  data={comps:obj.data.comps, details:obj.data.details||{}, stock:Array.isArray(obj.data.stock)?obj.data.stock:[], v:1, lastBackup:obj.data.lastBackup};
+  data={comps:obj.data.comps, details:obj.data.details||{}, v:1, lastBackup:obj.data.lastBackup};
   save(); toast('Backup loaded'); go('home');
 });
 
