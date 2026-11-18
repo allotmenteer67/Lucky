@@ -31,9 +31,9 @@ h2 .count{font-weight:400;color:var(--muted)}
 .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin:8px 0}
 .item{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:14px;
   padding:12px 14px;margin:8px 0;font:inherit;color:inherit}
-.item .top{display:flex;gap:8px;align-items:flex-start}
-.item .name{flex:1;font-weight:600;font-size:19px}
-.item .sub{color:var(--muted);font-size:16px;margin-top:3px}
+.c .top,.item .top{display:flex;gap:8px;align-items:flex-start}
+.c .name,.item .name{flex:1;font-weight:600;font-size:19px}
+.c .sub,.item .sub{color:var(--muted);font-size:16px;margin-top:3px}
 .item.due{border-left:6px solid var(--amber)}
 .item.today{border-left:6px solid var(--red)}
 .tag{display:inline-block;font-size:15px;font-weight:600;border-radius:8px;padding:2px 8px;white-space:nowrap}
@@ -94,6 +94,15 @@ nav button.on .ic{transform:scale(1.1)}
 .filter{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 0 4px}
 .filter .lbl{font-weight:600;font-size:17px}
 .filter input[type=range]{width:100%;margin:10px 0 2px;padding:0;border:0;accent-color:var(--green);height:32px}
+.c{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin:8px 0}
+.c .tapzone{display:block;width:100%;background:none;border:0;padding:0;text-align:left;font:inherit;color:inherit}
+.warn{background:#fdecea;color:#8c1d18;border-radius:8px;padding:6px 9px;margin-top:8px;font-size:16px;font-weight:600}
+.row{display:flex;gap:8px;margin-top:10px}
+.enter{flex:3;display:block;border:0;border-radius:12px;background:var(--green);color:#fff;font:700 19px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:14px;text-align:center;text-decoration:none}
+.no{flex:1.3;border:0;border-radius:12px;background:#eef2ed;color:#333;font:600 16px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:14px 6px}
+.sum{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 4px 6px}
+.sum b{font-size:21px;color:var(--green-dark)}
+.hnote{font-size:15px;opacity:.92;white-space:nowrap}
 .roundbar{background:var(--green-pale);color:var(--green-dark);border-radius:12px;padding:8px 12px;margin:0 0 8px;font-weight:600;font-size:16px;text-align:center}
 .ver{text-align:center;font-size:14px;color:#888;margin:20px 0 6px}
 </style>
@@ -102,10 +111,9 @@ nav button.on .ic{transform:scale(1.1)}
 <header><h1 id="title">Lucky Green</h1><span id="hdrBtns"></span></header>
 <main id="main"></main>
 <nav id="nav">
-  <button data-tab="home"><span class="ic">🍀</span>Home</button>
-  <button data-tab="add"><span class="ic">➕</span>Add</button>
+  <button data-tab="home"><span class="ic">🍀</span>Comps</button>
   <button data-tab="wins"><span class="ic">🏆</span>Wins</button>
-  <button data-tab="me"><span class="ic">👤</span>My details</button>
+  <button data-tab="more"><span class="ic">⚙️</span>More</button>
 </nav>
 <div id="modal"><div class="sheet" id="sheet"></div></div>
 <div id="toast"><span id="toastText"></span><button id="toastBtn"></button></div>
@@ -113,7 +121,7 @@ nav button.on .ic{transform:scale(1.1)}
 
 <script>
 'use strict';
-const APP_VERSION = '2026.11.18.7';
+const APP_VERSION = '2026.11.18.8';
 const STORE_KEY = 'luckygreen.v1';
 
 /* ---------- Storage (everything stays on this phone) ---------- */
@@ -129,7 +137,7 @@ function load(){
 }
 function save(){
   try{ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
-  catch(e){ ask('Could not save', 'The phone would not let the app save just now. Please make a backup from My details.', [{t:'OK'}]); }
+  catch(e){ ask('Could not save', 'The phone would not let the app save just now. Please make a backup from More.', [{t:'OK'}]); }
 }
 if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
 
@@ -162,7 +170,7 @@ function toPence(str){
   const n=parseFloat(s); if(isNaN(n)||n<0) return 0;
   return Math.round(n*100);
 }
-function money(p){ p=p||0; return '£'+(p/100).toFixed(2).replace(/\.00$/,''); }
+function money(p){ p=p||0; const [w,f]=(p/100).toFixed(2).split('.'); return '£'+w.replace(/\B(?=(\d{3})+(?!\d))/g,',')+(f==='00'?'':'.'+f); }
 function moneyExact(p){ return '£'+((p||0)/100).toFixed(2); }
 function penceToInput(p){ return p? (p/100).toFixed(2).replace(/\.00$/,'') : ''; }
 
@@ -186,6 +194,7 @@ function canEnterNow(c){
 function stateOf(c){
   if(c.outcome==='won') return 'won';
   if(c.outcome==='lost') return 'lost';
+  if(c.dismissed) return 'dismissed';
   if(canEnterNow(c)) return 'toenter';
   if(c.entries&&c.entries.length) return 'waiting';
   return 'missed';
@@ -239,9 +248,9 @@ let tab='home', view=null; // view = {type:'comp', id} | {type:'edit', id|null, 
 function go(t){ tab=t; view=null; render(); window.scrollTo(0,0); }
 function open(v){ view=v; render(); window.scrollTo(0,0); }
 $('#nav').addEventListener('click', e=>{ const b=e.target.closest('button[data-tab]'); if(b) go(b.dataset.tab); });
-function setHeader(title, btns){
+function setHeader(title, btns, note){
   $('#title').textContent=title;
-  const h=$('#hdrBtns'); h.innerHTML='';
+  const h=$('#hdrBtns'); h.innerHTML=note?'<span class="hnote">'+esc(note)+'</span>':'';
   (btns||[]).forEach(b=>{ const el=document.createElement('button'); el.textContent=b.t; el.onclick=b.fn; h.appendChild(el); });
 }
 function render(){
@@ -249,11 +258,13 @@ function render(){
   const m=$('#main');
   if(view){
     if(view.type==='comp') return renderComp(m, view.id);
-    if(view.type==='round') return renderRound(m);
+    if(view.type==='add') return renderAdd(m);
+    if(view.type==='details') return renderDetails(m);
+    if(view.type==='waiting') return renderWaiting(m);
     if(view.type==='edit') return renderEdit(m, view);
     if(view.type==='finished') return renderFinished(m);
   }
-  ({home:renderHome, add:renderAdd, wins:renderWins, me:renderMe})[tab](m);
+  ({home:renderHome, wins:renderWins, more:renderMore})[tab](m);
 }
 
 /* ---------- Prize value filter ---------- */
@@ -262,10 +273,6 @@ function minValuePence(){ return (data.settings&&data.settings.minValue||0)*100;
 // comps with no value given are always shown, because there's nothing to judge them by
 function passesValue(c){ return !c.value || c.value>=minValuePence(); }
 function filterLabel(){ const v=data.settings.minValue||0; return v ? 'Only prizes worth £'+v+' or more' : 'Showing prizes of any value'; }
-function roundList(){
-  return data.comps.filter(c=>stateOf(c)==='toenter' && passesValue(c))
-    .sort((a,b)=>(a.closes||'9999')<(b.closes||'9999')?-1:(a.closes||'9999')>(b.closes||'9999')?1:0).map(c=>c.id);
-}
 
 /* ---------- Home ---------- */
 function compItem(c, extraClass){
@@ -295,48 +302,71 @@ function monthStats(){
   });
   return {entries, spent, wins, name:MONTHS_LONG[now.getMonth()]};
 }
+function enteredToday(){ const t=todayStr(); let n=0; data.comps.forEach(c=>(c.entries||[]).forEach(e=>{ if(e.date===t) n++; })); return n; }
+const byClose=(a,b)=>(a.closes||'9999')<(b.closes||'9999')?-1:(a.closes||'9999')>(b.closes||'9999')?1:0;
+function shortCloses(c){
+  if(!c.closes) return '';
+  const n=daysFromToday(c.closes);
+  if(n===0) return 'closes today'; if(n===1) return 'closes tomorrow';
+  if(n<7) return 'closes '+DAYS[parseDay(c.closes).getDay()];
+  const d=parseDay(c.closes); return 'closes '+d.getDate()+' '+MONTHS[d.getMonth()];
+}
+// the one big button for each comp: what it does depends on how the comp is entered
+function enterButton(c){
+  const how=c.how||'other';
+  if(how==='online' && c.website) return '<a class="enter" data-go="'+c.id+'" href="'+esc(safeUrl(c.website))+'" target="_blank" rel="noopener">Enter</a>';
+  if(how==='text' && c.textNumber) return '<a class="enter" data-go="'+c.id+'" href="'+esc(smsLink(c))+'">Send text</a>';
+  if(how==='email' && c.emailTo) return '<a class="enter" data-go="'+c.id+'" href="'+esc(mailLink(c))+'">Send email</a>';
+  if(how==='phone' && c.phoneNumber) return '<a class="enter" data-go="'+c.id+'" href="tel:'+esc(c.phoneNumber.replace(/[^\d+]/g,''))+'">Ring</a>';
+  return '<button class="enter" data-comp="'+c.id+'">'+(how==='post'?'Post it':'Details')+'</button>';
+}
+function listCard(c){
+  const tag = c.cost ? '<span class="tag cost">'+moneyExact(c.cost)+(c.how==='text'?' text':c.how==='phone'?' call':'')+'</span>' : '<span class="tag free">Free</span>';
+  const sub=[]; if(c.value) sub.push('Worth '+money(c.value)); const cl=shortCloses(c); if(cl) sub.push(cl);
+  if(c.often==='daily') sub.push('enter every day'); else if(c.often==='weekly') sub.push('enter every week'); else if(c.often==='any') sub.push('enter as often as you like');
+  let t=sub.join(' · '); t=t.charAt(0).toUpperCase()+t.slice(1);
+  return '<div class="c"><button class="tapzone" data-comp="'+c.id+'"><div class="top"><div class="name">'+esc(c.prize||'(no prize name)')+'</div>'+tag+'</div>'+
+    (t?'<div class="sub">'+esc(t)+'</div>':'')+'</button>'+
+    (c.warning?'<div class="warn">⚠️ '+esc(c.warning)+'</div>':'')+
+    '<div class="row">'+enterButton(c)+'<button class="no" data-no="'+c.id+'">Not for me</button></div></div>';
+}
+function bindGo(m){
+  m.querySelectorAll('[data-go]').forEach(a=>a.addEventListener('click', ()=>{
+    const c=compById(a.dataset.go); if(!c) return;
+    pending={id:c.id, at:Date.now()};
+    // online entries: put the answer on the clipboard so she can paste it straight into the form
+    if(c.how==='online' && c.answer){ try{ navigator.clipboard.writeText(c.answer).catch(()=>{}); }catch(e){} }
+  }));
+}
 function renderHome(m){
-  setHeader('Lucky Green');
-  const s=monthStats();
-  const allToEnter=data.comps.filter(c=>stateOf(c)==='toenter');
-  const toEnter=allToEnter.filter(passesValue);
-  const hiddenN=allToEnter.length-toEnter.length;
-  const byClose=(a,b)=>(a.closes||'9999')<(b.closes||'9999')?-1:(a.closes||'9999')>(b.closes||'9999')?1:0;
-  toEnter.sort(byClose);
-  const today=toEnter.filter(c=>c.closes&&daysFromToday(c.closes)===0);
-  const week=toEnter.filter(c=>c.closes&&daysFromToday(c.closes)>=1&&daysFromToday(c.closes)<=7);
-  const later=toEnter.filter(c=>!c.closes||daysFromToday(c.closes)>7);
-  const waiting=data.comps.filter(c=>stateOf(c)==='waiting').sort((a,b)=>(a.resultsBy||a.closes||'9999')<(b.resultsBy||b.closes||'9999')?-1:1);
-  const due=waiting.filter(resultsDue), notDue=waiting.filter(c=>!resultsDue(c));
-  const finished=data.comps.filter(c=>['won','lost','missed'].includes(stateOf(c))).length;
-  let h='<div class="stats"><div class="stat"><b>'+s.entries+'</b><span>entered in '+s.name+'</span></div>'+
-    '<div class="stat"><b>'+s.wins+'</b><span>'+(s.wins===1?'win':'wins')+'</span></div>'+
-    '<div class="stat"><b>'+moneyExact(s.spent)+'</b><span>spent</span></div></div>';
-  if(!data.comps.length){
-    h+='<div class="card empty">No competitions yet.<br>Tap <b>➕ Add</b> at the bottom to add the first one.</div>';
-  }
-  if(allToEnter.length){
-    h+='<button class="btn" id="roundBtn" style="margin-top:14px"'+(toEnter.length?'':' disabled')+'>▶ Start today\'s round ('+toEnter.length+')<small>Goes through each comp to enter, one after another</small></button>';
-    const idx=Math.max(0, VALUE_STEPS.indexOf(data.settings.minValue||0));
-    h+='<div class="filter"><div class="lbl" id="fLbl">'+esc(filterLabel())+'</div>'+
-      '<input type="range" id="fRange" min="0" max="'+(VALUE_STEPS.length-1)+'" step="1" value="'+idx+'">'+
-      '<div class="small">'+(hiddenN?hiddenN+' smaller '+(hiddenN===1?'prize':'prizes')+' hidden. ':'')+'Comps with no value given are always shown.</div></div>';
-  }
-  const sec=(title, list, cls)=> list.length ? '<h2>'+title+' <span class="count">('+list.length+')</span></h2>'+list.map(c=>compItem(c,cls)).join('') : '';
-  h+=sec('Closing today', today, 'today');
-  h+=sec('Closing in the next 7 days', week);
-  h+=sec('Closing later', later);
-  h+=sec('Results due – check your email', due, 'due');
-  h+=sec('Waiting for results', notDue);
-  if(finished) h+='<button class="btn quiet" id="finBtn" style="margin-top:22px">Finished comps ('+finished+')</button>';
+  const n=enteredToday();
+  setHeader('Lucky Green', [], n?n+' entered today':'');
+  const ready=data.comps.filter(c=>stateOf(c)==='toenter' && passesValue(c)).sort(byClose);
+  const waiting=data.comps.filter(c=>stateOf(c)==='waiting');
+  const due=waiting.filter(resultsDue).length;
+  let h='<div class="sum"><b>'+(ready.length?ready.length+' '+(ready.length===1?'comp':'comps')+' ready':'All done')+'</b>'+
+    '<button class="copy" id="checkNew">↻ Check for new</button></div>';
+  if(!ready.length) h+='<div class="card empty">Nothing to enter right now. 🍀</div>';
+  h+=ready.map(listCard).join('');
+  if(waiting.length) h+='<button class="btn quiet" id="waitBtn" style="margin-top:22px">'+(due?'Results due – check your email ('+due+')':'Waiting to hear ('+waiting.length+')')+'</button>';
+  m.innerHTML=h; bindItems(m); bindGo(m);
+  m.querySelectorAll('[data-no]').forEach(b=>b.onclick=()=>{
+    const c=compById(b.dataset.no); if(!c) return;
+    c.dismissed=true; stamp(c); save(); const y=window.scrollY; render(); window.scrollTo(0,y);
+    toast('Taken off the list', 'Undo', ()=>{ delete c.dismissed; save(); render(); });
+  });
+  $('#checkNew').onclick=()=>toast('Nothing new right now');
+  const wb=$('#waitBtn'); if(wb) wb.onclick=()=>open({type:'waiting'});
+}
+function renderWaiting(m){
+  setHeader('Waiting to hear', [{t:'‹ Back', fn:()=>{ view=null; render(); }}]);
+  const w=data.comps.filter(c=>stateOf(c)==='waiting').sort((a,b)=>(a.resultsBy||a.closes||'9999')<(b.resultsBy||b.closes||'9999')?-1:1);
+  const due=w.filter(resultsDue), rest=w.filter(c=>!resultsDue(c));
+  let h='';
+  if(due.length) h+='<h2>Results due – check your email</h2>'+due.map(c=>compItem(c,'due')).join('');
+  if(rest.length) h+='<h2>Entered, waiting</h2>'+rest.map(c=>compItem(c)).join('');
+  if(!w.length) h='<div class="empty">Nothing waiting.</div>';
   m.innerHTML=h; bindItems(m);
-  const fb=$('#finBtn'); if(fb) fb.onclick=()=>open({type:'finished'});
-  const rb=$('#roundBtn'); if(rb) rb.onclick=()=>{ const ids=roundList(); if(ids.length) open({type:'round', ids, i:0, done:0}); };
-  const fr=$('#fRange');
-  if(fr){
-    fr.oninput=()=>{ data.settings.minValue=VALUE_STEPS[+fr.value]; $('#fLbl').textContent=filterLabel(); };
-    fr.onchange=()=>{ data.settings.minValue=VALUE_STEPS[+fr.value]; save(); const y=window.scrollY; render(); window.scrollTo(0,y); };
-  }
 }
 let finishedShown=40;
 function renderFinished(m){
@@ -350,42 +380,24 @@ function renderFinished(m){
   const mb=$('#moreBtn'); if(mb) mb.onclick=()=>{ finishedShown+=40; render(); };
 }
 
-/* ---------- Today's round ---------- */
-function renderRound(m){
-  // skip anything that can no longer be entered (entered elsewhere, closed at midnight, deleted)
-  while(view.i<view.ids.length){ const c=compById(view.ids[view.i]); if(c && canEnterNow(c)) break; view.ids.splice(view.i,1); }
-  if(view.i>=view.ids.length){
-    setHeader('Today\'s round', [{t:'Done', fn:()=>go('home')}]);
-    m.innerHTML='<div class="card" style="text-align:center;margin-top:20px"><div style="font-size:48px">🍀</div>'+
-      '<h2 style="margin:6px 0">That\'s the round done</h2><p>You entered '+view.done+' '+(view.done===1?'competition':'competitions')+
-      (view.skipped?' and skipped '+view.skipped:'')+'.</p></div><button class="btn" id="rDone">Back to Home</button>';
-    $('#rDone').onclick=()=>go('home'); return;
-  }
-  renderComp(m, view.ids[view.i], true);
-}
-function roundNext(entered){
-  if(!view || view.type!=='round') return;
-  if(entered) view.done++; else { view.skipped=(view.skipped||0)+1; view.i++; }
-  render(); window.scrollTo(0,0);
-}
-
 /* ---------- Comp card ---------- */
 function fieldRow(label, value, copyLabel){
   if(!value) return '';
   return '<div class="field"><div class="grow"><div class="lab">'+esc(label)+'</div><div class="val">'+esc(value)+'</div></div>'+
     (copyLabel?'<button class="copy" data-copy="'+esc(value)+'" data-what="'+esc(copyLabel)+'">Copy</button>':'')+'</div>';
 }
+function mailLink(c){ return 'mailto:'+(c.emailTo||'').trim()+'?subject='+encodeURIComponent(c.prize||'Competition entry')+'&body='+encodeURIComponent(c.answer?'Answer: '+c.answer+'\n\n':''); }
 function smsLink(c){ return 'sms:'+encodeURIComponent((c.textNumber||'').replace(/\s/g,''))+'?&body='+encodeURIComponent(c.textMessage||''); }
-function renderComp(m, id, inRound){
+function renderComp(m, id){
   const c=compById(id); if(!c){ view=null; return render(); }
-  if(inRound) setHeader('Today\'s round', [{t:'Finish', fn:()=>go('home')}]);
-  else setHeader('Competition', [{t:'‹ Back', fn:()=>{ view=null; render(); }}, {t:'Edit', fn:()=>open({type:'edit', id:c.id})}]);
+  setHeader('Competition', [{t:'‹ Back', fn:()=>{ view=null; render(); }}, {t:'Edit', fn:()=>open({type:'edit', id:c.id})}]);
   const st=stateOf(c);
-  let h=inRound?'<div class="roundbar">'+(view.i+1)+' of '+view.ids.length+(view.done?' · '+view.done+' entered so far':'')+'</div>':'';
-  h+='<div class="prize">'+esc(c.prize||'(no prize name)')+'</div>';
+  let h='<div class="prize">'+esc(c.prize||'(no prize name)')+'</div>';
   const bits=[]; if(c.value) bits.push('Worth '+money(c.value)); if(c.seenIn) bits.push('Seen in: '+c.seenIn+(c.seenName?' – '+c.seenName:''));
   if(bits.length) h+='<div class="small" style="margin:0 2px 6px">'+esc(bits.join(' · '))+'</div>';
 
+  if(c.warning) h+='<div class="warn" style="margin:4px 0 8px">⚠️ '+esc(c.warning)+'</div>';
+  if(st==='dismissed') h+='<div class="note">You said "Not for me". <button class="linkbtn" id="undismiss" style="padding:0">Put it back on the list</button></div>';
   if(st==='won') h+='<div class="ok">🏆 You won'+(c.wonWhat?': '+esc(c.wonWhat):'')+(c.wonValue?' ('+money(c.wonValue)+')':'')+'</div>';
   if(st==='lost') h+='<div class="note">Not this time.</div>';
   if(st==='missed') h+='<div class="note">This closed before it was entered.</div>';
@@ -405,11 +417,10 @@ function renderComp(m, id, inRound){
     if(how==='online' && c.website) h+='<a class="btn" id="goBtn" href="'+esc(safeUrl(c.website))+'" target="_blank" rel="noopener">🌐 Open the website'+(c.answer?'<small>Copies your answer: '+esc(c.answer.length>30?c.answer.slice(0,30)+'…':c.answer)+'</small>':'')+'</a>';
     if(how==='text' && c.textNumber) h+='<a class="btn" id="goBtn" href="'+esc(smsLink(c))+'">💬 Send the text'+(c.cost?'<small>Costs '+esc(moneyExact(c.cost))+'</small>':'')+'</a>';
     if(how==='phone' && c.phoneNumber) h+='<a class="btn" id="goBtn" href="tel:'+esc(c.phoneNumber.replace(/[^\d+]/g,''))+'">📞 Ring the number'+(c.cost?'<small>Costs '+esc(moneyExact(c.cost))+'</small>':'')+'</a>';
-    if(how==='email' && c.emailTo) h+='<a class="btn" id="goBtn" href="mailto:'+esc(c.emailTo.trim())+'?subject='+encodeURIComponent(c.prize||'Competition entry')+'&body='+encodeURIComponent(c.answer?'Answer: '+c.answer+'\n\n':'')+'">📧 Write the email</a>';
+    if(how==='email' && c.emailTo) h+='<a class="btn" id="goBtn" href="'+esc(mailLink(c))+'">📧 Write the email</a>';
     if(how==='post' && c.postAddress) h+='<button class="btn" data-copy="'+esc(c.postAddress)+'" data-what="Address">✉️ Copy the address to send to</button>';
-    h+='<button class="btn second" id="enteredBtn">✓ I\'ve entered'+(inRound?' – next comp':'')+(c.cost?'<small>Adds '+esc(moneyExact(c.cost))+' to spending</small>':'')+'</button>';
+    h+='<button class="btn second" id="enteredBtn">✓ I\'ve entered'+(c.cost?'<small>Adds '+esc(moneyExact(c.cost))+' to spending</small>':'')+'</button>';
   }
-  if(inRound) h+='<button class="btn quiet" id="skipBtn">Skip this one – next comp</button>';
   if(st==='waiting'){
     h+='<div class="row2"><button class="btn" id="wonBtn">🏆 Won!</button><button class="btn quiet" id="lostBtn">Not this time</button></div>';
   }
@@ -446,7 +457,7 @@ function renderComp(m, id, inRound){
     if(how==='online' && c.answer){ try{ navigator.clipboard.writeText(c.answer).catch(()=>{}); }catch(e){} }
   });
   const eb=$('#enteredBtn'); if(eb) eb.onclick=()=>addEntry(c);
-  const sb=$('#skipBtn'); if(sb) sb.onclick=()=>roundNext(false);
+  const ud=$('#undismiss'); if(ud) ud.onclick=()=>{ delete c.dismissed; stamp(c); save(); render(); };
   const wb=$('#wonBtn'); if(wb) wb.onclick=()=>markWon(c);
   const lb=$('#lostBtn'); if(lb) lb.onclick=()=>{ c.outcome='lost'; c.outcomeDate=todayStr(); stamp(c); save(); render(); toast('Better luck next time','Undo',()=>{ delete c.outcome; delete c.outcomeDate; save(); render(); }); };
   const ub=$('#undoOutcome'); if(ub) ub.onclick=()=>{ delete c.outcome; delete c.outcomeDate; delete c.wonWhat; delete c.wonValue; stamp(c); save(); render(); };
@@ -462,13 +473,9 @@ function addEntry(c){
   c.entries=c.entries||[];
   const e={date:todayStr(), cost:c.cost||0};
   c.entries.push(e); stamp(c); save();
-  const r = (view && view.type==='round' && view.ids[view.i]===c.id) ? view : null;
-  if(r){ r.done++; r.i++; }
-  render(); if(r) window.scrollTo(0,0);
+  const y=window.scrollY; render(); if(!view) window.scrollTo(0,y);
   toast('Entered'+(e.cost?' – '+moneyExact(e.cost)+' added':''), 'Undo', ()=>{
-    const i=c.entries.lastIndexOf(e); if(i>=0) c.entries.splice(i,1); save();
-    if(r && view===r){ r.done--; r.i=Math.max(0, r.ids.indexOf(c.id)); }
-    render();
+    const i=c.entries.lastIndexOf(e); if(i>=0) c.entries.splice(i,1); save(); render();
   });
 }
 async function markWon(c){
@@ -488,15 +495,15 @@ document.addEventListener('visibilitychange', ()=>{
   if(Date.now()-p.at>30*60*1000) return;
   const c=compById(p.id); if(!c || !canEnterNow(c)) return;
   setTimeout(async()=>{
-    const msg = c.how==='text' ? 'Did you send the text?' : c.how==='phone' ? 'Did you get through and enter?' : c.how==='email' ? 'Did you send the email?' : 'Did you enter?';
-    const r=await ask(msg, c.prize+(c.cost?' – '+moneyExact(c.cost)+' will be added to your spending.':''), [{t:'Yes, I entered', v:true},{t:'Not yet', cls:'quiet', v:false}]);
+    const msg = c.how==='text' ? 'Sent the text?' : c.how==='email' ? 'Sent the email?' : 'Entered?';
+    const r=await ask(msg, c.prize+(c.cost?' ('+moneyExact(c.cost)+')':''), [{t:'Yes', v:true},{t:'No', cls:'quiet', v:false}]);
     if(r) addEntry(c);
   }, 400);
 });
 
 /* ---------- Add / edit ---------- */
 function renderAdd(m){
-  setHeader('Add a competition');
+  setHeader('Add a competition', [{t:'‹ Back', fn:()=>{ view=null; render(); }}]);
   m.innerHTML='<div class="big3" style="margin-top:8px">'+
     '<button class="btn" id="typeBtn">✏️ Type it in<small>Use the microphone on the keyboard to say it</small></button>'+
     '<button class="btn" id="linkBtn">🔗 Paste a link<small>Copy the link in Safari first (Share, then Copy)</small></button>'+
@@ -533,6 +540,7 @@ function renderEdit(m, v){
     '<label class="f">Results by <span class="hint">if it says</span></label><input id="eresults" type="date" value="'+esc(c.resultsBy||'')+'">'+
     '<label class="f">How often can you enter?</label>'+chipsHtml('often', OFTEN, c.often||'once')+
     '<label class="f">Run by <span class="hint">the company, if it says</span></label><input id="epromoter" value="'+esc(c.promoter||'')+'">'+
+    '<label class="f">Catch to warn about <span class="hint">shows in red on the list</span></label><input id="ewarning" value="'+esc(c.warning||'')+'" placeholder="e.g. Signs you up to their emails">'+
     '<label class="f">Notes</label><textarea id="enotes">'+esc(c.notes||'')+'</textarea>'+
     '<button class="btn" id="saveBtn" style="margin-top:18px">Save</button>'+
     (isNew?'':'<button class="btn danger" id="delBtn" style="margin-top:26px">Delete this competition</button>');
@@ -576,7 +584,7 @@ function renderEdit(m, v){
       prize, value:toPence($('#evalue').value), seenIn:chosen.seenIn, seenName:$('#eseenName').value.trim(),
       question:$('#equestion').value.trim(), answer:$('#eanswer').value.trim(),
       how:chosen.how, cost:toPence($('#ecost').value), closes, resultsBy, often:chosen.often,
-      promoter:$('#epromoter').value.trim(), notes:$('#enotes').value.trim()
+      promoter:$('#epromoter').value.trim(), notes:$('#enotes').value.trim(), warning:$('#ewarning').value.trim()
     });
     // keep only the contact details that belong to the chosen way of entering (plus a website for the rules)
     out.website=howVals.website.trim();
@@ -589,7 +597,7 @@ function renderEdit(m, v){
     if(isNew) data.comps.push(out);
     save();
     toast(isNew?'Competition added':'Saved');
-    tab = isNew ? 'home' : tab;
+    if(isNew) tab='home';
     open({type:'comp', id:out.id});
   };
   const db=$('#delBtn');
@@ -639,8 +647,34 @@ const DETAILS=[
   ['dob','Date of birth','some comps ask','']
 ];
 let editingDetails=false;
-function renderMe(m){
-  setHeader('My details', editingDetails?[]:[{t:'Change', fn:()=>{ editingDetails=true; render(); }}]);
+function renderMore(m){
+  setHeader('More');
+  const idx=Math.max(0, VALUE_STEPS.indexOf(data.settings.minValue||0));
+  const hiddenN=data.comps.filter(c=>stateOf(c)==='toenter' && !passesValue(c)).length;
+  const finished=data.comps.filter(c=>['won','lost','missed'].includes(stateOf(c))).length;
+  let h='<button class="btn" id="addBtn">➕ Add a competition</button>';
+  h+='<div class="filter"><div class="lbl" id="fLbl">'+esc(filterLabel())+'</div>'+
+    '<input type="range" id="fRange" min="0" max="'+(VALUE_STEPS.length-1)+'" step="1" value="'+idx+'">'+
+    '<div class="small">'+(hiddenN?hiddenN+' smaller '+(hiddenN===1?'prize':'prizes')+' hidden. ':'')+'Comps with no value given are always shown.</div></div>';
+  h+='<button class="btn second" id="detBtn">👤 My details</button>';
+  if(finished) h+='<button class="btn second" id="finBtn">Finished comps ('+finished+')</button>';
+  h+='<h2>Keep a copy safe</h2><div class="card"><p style="margin:0 0 6px">Save a backup now and then, and keep it in Files or iCloud. If the phone is lost or replaced, load it back in.</p>'+
+    '<button class="btn" id="bSave">Save a backup</button><button class="btn quiet" id="bLoad">Load a backup</button>'+
+    (data.lastBackup?'<p class="small" style="margin:6px 0 0">Last backup: '+esc(niceDate(data.lastBackup))+'</p>':'')+'</div>';
+  h+='<div class="ver">Lucky Green · version '+APP_VERSION+'</div>';
+  m.innerHTML=h;
+  $('#addBtn').onclick=()=>open({type:'add'});
+  $('#detBtn').onclick=()=>open({type:'details'});
+  const fb=$('#finBtn'); if(fb) fb.onclick=()=>open({type:'finished'});
+  const fr=$('#fRange');
+  fr.oninput=()=>{ data.settings.minValue=VALUE_STEPS[+fr.value]; $('#fLbl').textContent=filterLabel(); };
+  fr.onchange=()=>{ data.settings.minValue=VALUE_STEPS[+fr.value]; save(); const y=window.scrollY; render(); window.scrollTo(0,y); };
+  $('#bSave').onclick=saveBackup;
+  $('#bLoad').onclick=()=>{ $('#fileIn').value=''; $('#fileIn').click(); };
+}
+function renderDetails(m){
+  const back={t:'‹ Back', fn:()=>{ editingDetails=false; view=null; render(); }};
+  setHeader('My details', editingDetails?[]:[back, {t:'Change', fn:()=>{ editingDetails=true; render(); }}]);
   const d=data.details;
   let h='';
   if(editingDetails){
@@ -656,15 +690,9 @@ function renderMe(m){
   const any=DETAILS.some(([k])=>d[k]);
   h+='<div class="card">'+(any ? DETAILS.map(([k,label])=>fieldRow(label, d[k], label)).join('') : '<div class="empty">Tap <b>Change</b> at the top to put your details in.</div>')+'</div>';
   if(d.name||d.address) h+='<button class="btn second" id="copyAddr">Copy name and address together</button>';
-  h+='<h2>Keep a copy safe</h2><div class="card"><p style="margin:0 0 6px">Save a backup now and then, and keep it in Files or iCloud. If the phone is lost or replaced, load it back in.</p>'+
-    '<button class="btn" id="bSave">Save a backup</button><button class="btn quiet" id="bLoad">Load a backup</button>'+
-    (data.lastBackup?'<p class="small" style="margin:6px 0 0">Last backup: '+esc(niceDate(data.lastBackup))+'</p>':'')+'</div>';
-  h+='<div class="ver">Lucky Green · version '+APP_VERSION+'</div>';
   m.innerHTML=h;
   m.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText(b.dataset.copy, b.dataset.what));
   const ca=$('#copyAddr'); if(ca) ca.onclick=()=>copyText([d.name,d.address,d.postcode].filter(Boolean).join('\n'), 'Name and address');
-  $('#bSave').onclick=saveBackup;
-  $('#bLoad').onclick=()=>{ $('#fileIn').value=''; $('#fileIn').click(); };
 }
 async function saveBackup(){
   data.lastBackup=todayStr(); save();
