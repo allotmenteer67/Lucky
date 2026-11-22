@@ -103,6 +103,9 @@ nav button.on .ic{transform:scale(1.1)}
 .sum{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 4px 6px}
 .sum b{font-size:21px;color:var(--green-dark)}
 .hnote{font-size:15px;opacity:.92;white-space:nowrap}
+.sites{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 14px}
+.site{display:flex;align-items:center;justify-content:center;text-align:center;min-height:64px;border-radius:14px;background:var(--green-dark);color:#fff;
+  font:700 18px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;text-decoration:none;padding:10px}
 .roundbar{background:var(--green-pale);color:var(--green-dark);border-radius:12px;padding:8px 12px;margin:0 0 8px;font-weight:600;font-size:16px;text-align:center}
 .ver{text-align:center;font-size:14px;color:#888;margin:20px 0 6px}
 </style>
@@ -121,20 +124,21 @@ nav button.on .ic{transform:scale(1.1)}
 
 <script>
 'use strict';
-const APP_VERSION = '2026.11.22.4';
+const APP_VERSION = '2026.11.22.5';
 const STORE_KEY = 'luckygreen.v1';
 // Reads a pasted link or a photo. Only the link or the photo is sent: never anything about her.
 const READ_URL = 'https://yhlmrarektsjrfardrkc.supabase.co/functions/v1/lucky-read';
 
 /* ---------- Storage (everything stays on this phone) ---------- */
-function blankData(){ return {comps:[], details:{}, settings:{minValue:0}, v:1}; }
+const DEFAULT_SITES=[{id:'pmp', name:'Pick My Postcode', url:'https://pickmypostcode.com/'}];
+function blankData(){ return {comps:[], details:{}, settings:{minValue:0}, sites:DEFAULT_SITES.slice(), v:1}; }
 let data = load();
 function load(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
     if(!raw) return blankData();
     const d = JSON.parse(raw);
-    return {comps:Array.isArray(d.comps)?d.comps:[], details:d.details||{}, settings:Object.assign({minValue:0}, d.settings||{}), v:1, lastBackup:d.lastBackup};
+    return {comps:Array.isArray(d.comps)?d.comps:[], details:d.details||{}, settings:Object.assign({minValue:0}, d.settings||{}), sites:Array.isArray(d.sites)?d.sites:DEFAULT_SITES.slice(), v:1, lastBackup:d.lastBackup};
   }catch(e){ return blankData(); }
 }
 function save(){
@@ -264,6 +268,7 @@ function render(){
     if(view.type==='paste') return renderPaste(m);
     if(view.type==='reading') return renderReading(m);
     if(view.type==='details') return renderDetails(m);
+    if(view.type==='sites') return renderSites(m);
     if(view.type==='waiting') return renderWaiting(m);
     if(view.type==='edit') return renderEdit(m, view);
     if(view.type==='finished') return renderFinished(m);
@@ -348,7 +353,11 @@ function renderHome(m){
   const ready=data.comps.filter(c=>stateOf(c)==='toenter' && passesValue(c)).sort(byClose);
   const waiting=data.comps.filter(c=>stateOf(c)==='waiting');
   const due=waiting.filter(resultsDue).length;
-  let h='<div class="sum"><b>'+(ready.length?ready.length+' '+(ready.length===1?'comp':'comps')+' ready':'All done')+'</b>'+
+  let h='';
+  if((data.sites||[]).length){
+    h+='<h2 style="margin-top:6px">My comp sites</h2><div class="sites">'+data.sites.map(x=>'<a class="site" href="'+esc(safeUrl(x.url))+'" target="_blank" rel="noopener">'+esc(x.name)+'</a>').join('')+'</div>';
+  }
+  h+='<div class="sum"><b>'+(ready.length?ready.length+' '+(ready.length===1?'comp':'comps')+' ready':'All done')+'</b>'+
     '<button class="copy" id="checkNew">↻ Check for new</button></div>';
   if(!ready.length) h+='<div class="card empty">Nothing to enter right now. 🍀</div>';
   h+=ready.map(listCard).join('');
@@ -720,6 +729,30 @@ const DETAILS=[
   ['phone','Phone','','inputmode="tel"'],
   ['dob','Date of birth','some comps ask','']
 ];
+function renderSites(m){
+  setHeader('My comp sites', [{t:'‹ Back', fn:()=>{ view=null; render(); }}]);
+  const list=data.sites||[];
+  let h='<p class="small" style="margin:4px">Sites she plays on. They show as big buttons at the top of Comps, and open in Safari where she\'s logged in.</p>';
+  h+= list.length ? '<div class="card">'+list.map(x=>'<div class="field"><div class="grow"><div class="val"><b>'+esc(x.name)+'</b></div><div class="small" style="word-break:break-all">'+esc(x.url)+'</div></div>'+
+      '<button class="copy" data-rmsite="'+esc(x.id)+'">Remove</button></div>').join('')+'</div>' : '<div class="card empty">No sites yet.</div>';
+  h+='<h2>Add a comp site</h2><label class="f">Link <span class="hint">hold in the box and tap Paste</span></label>'+
+    '<input id="sUrl" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="e.g. pickmypostcode.com">'+
+    '<label class="f">Name on the button <span class="hint">optional</span></label><input id="sName" placeholder="e.g. Pick My Postcode">'+
+    '<button class="btn" id="sAdd" style="margin-top:14px">Add site</button>';
+  m.innerHTML=h;
+  m.querySelectorAll('[data-rmsite]').forEach(b=>b.onclick=()=>{
+    const i=data.sites.findIndex(x=>x.id===b.dataset.rmsite); if(i<0) return;
+    const gone=data.sites.splice(i,1)[0]; save(); render();
+    toast(gone.name+' removed','Undo',()=>{ data.sites.splice(i,0,gone); save(); render(); });
+  });
+  $('#sAdd').onclick=()=>{
+    const url=findLink($('#sUrl').value);
+    if(!url){ toast('That doesn\'t look like a link'); return; }
+    const name=$('#sName').value.trim() || siteName(url).replace(/\.(co\.uk|org\.uk|com|uk|net|org|ie)$/,'');
+    const nice = name.charAt(0).toUpperCase()+name.slice(1);
+    data.sites=data.sites||[]; data.sites.push({id:uid(), name:nice, url}); save(); toast(nice+' added'); render();
+  };
+}
 let editingDetails=false;
 function renderMore(m){
   setHeader('More');
@@ -730,6 +763,7 @@ function renderMore(m){
   h+='<div class="filter"><div class="lbl" id="fLbl">'+esc(filterLabel())+'</div>'+
     '<input type="range" id="fRange" min="0" max="'+(VALUE_STEPS.length-1)+'" step="1" value="'+idx+'">'+
     '<div class="small">'+(hiddenN?hiddenN+' smaller '+(hiddenN===1?'prize':'prizes')+' hidden. ':'')+'Comps with no value given are always shown.</div></div>';
+  h+='<button class="btn second" id="sitesBtn">🌐 My comp sites ('+(data.sites||[]).length+')</button>';
   h+='<button class="btn second" id="detBtn">👤 My details</button>';
   if(finished) h+='<button class="btn second" id="finBtn">Finished comps ('+finished+')</button>';
   h+='<h2>Keep a copy safe</h2><div class="card"><p style="margin:0 0 6px">Save a backup now and then, and keep it in Files or iCloud. If the phone is lost or replaced, load it back in.</p>'+
@@ -739,6 +773,7 @@ function renderMore(m){
   m.innerHTML=h;
   $('#addBtn').onclick=()=>open({type:'add'});
   $('#detBtn').onclick=()=>open({type:'details'});
+  $('#sitesBtn').onclick=()=>open({type:'sites'});
   const fb=$('#finBtn'); if(fb) fb.onclick=()=>open({type:'finished'});
   const fr=$('#fRange');
   fr.oninput=()=>{ data.settings.minValue=VALUE_STEPS[+fr.value]; $('#fLbl').textContent=filterLabel(); };
@@ -791,7 +826,7 @@ $('#fileIn').addEventListener('change', async e=>{
   const when=obj.saved?niceDate(todayStr(new Date(obj.saved))):'an unknown date';
   const r=await ask('Load this backup?', 'It\'s from '+when+' with '+obj.data.comps.length+' competitions. It will replace everything in the app now.', [{t:'Yes, replace everything', cls:'danger', v:true},{t:'Cancel', cls:'quiet', v:false}]);
   if(!r) return;
-  data={comps:obj.data.comps, details:obj.data.details||{}, settings:Object.assign({minValue:0}, obj.data.settings||{}), v:1, lastBackup:obj.data.lastBackup};
+  data={comps:obj.data.comps, details:obj.data.details||{}, settings:Object.assign({minValue:0}, obj.data.settings||{}), sites:Array.isArray(obj.data.sites)?obj.data.sites:DEFAULT_SITES.slice(), v:1, lastBackup:obj.data.lastBackup};
   save(); toast('Backup loaded'); go('home');
 });
 
