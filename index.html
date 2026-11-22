@@ -121,8 +121,10 @@ nav button.on .ic{transform:scale(1.1)}
 
 <script>
 'use strict';
-const APP_VERSION = '2026.11.22.2';
+const APP_VERSION = '2026.11.22.3';
 const STORE_KEY = 'luckygreen.v1';
+// Reads a pasted link or a photo. Only the link or the photo is sent: never anything about her.
+const READ_URL = 'https://yhlmrarektsjrfardrkc.supabase.co/functions/v1/lucky-read';
 
 /* ---------- Storage (everything stays on this phone) ---------- */
 function blankData(){ return {comps:[], details:{}, settings:{minValue:0}, v:1}; }
@@ -260,6 +262,7 @@ function render(){
     if(view.type==='comp') return renderComp(m, view.id);
     if(view.type==='add') return renderAdd(m);
     if(view.type==='paste') return renderPaste(m);
+    if(view.type==='reading') return renderReading(m);
     if(view.type==='details') return renderDetails(m);
     if(view.type==='waiting') return renderWaiting(m);
     if(view.type==='edit') return renderEdit(m, view);
@@ -508,7 +511,15 @@ function renderAdd(m){
   m.innerHTML='<div class="big3" style="margin-top:8px">'+
     '<button class="btn" id="typeBtn">✏️ Type it in<small>Use the microphone on the keyboard to say it</small></button>'+
     '<button class="btn" id="linkBtn">🔗 Paste a link<small>Copy the link in Safari first (Share, then Copy)</small></button>'+
-    '<button class="btn" disabled>📷 Snap it<small>Coming soon</small></button></div>';
+    '<button class="btn" id="snapBtn">📷 Snap it<small>A photo of a comp in a paper or magazine</small></button></div>'+
+    '<input type="file" id="snapIn" accept="image/*" style="display:none">';
+  $('#snapBtn').onclick=()=>{ $('#snapIn').value=''; $('#snapIn').click(); };
+  $('#snapIn').onchange=async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    let photo='';
+    try{ photo=await shrinkPhoto(f); }catch(err){ toast('Couldn\'t open that photo'); return; }
+    readComp({photo}, {});
+  };
   $('#typeBtn').onclick=()=>open({type:'edit', id:null, preset:{}});
   $('#linkBtn').onclick=()=>open({type:'paste'});
 }
@@ -529,8 +540,53 @@ function renderPaste(m){
   $('#pNext').onclick=()=>{
     const link=findLink($('#pBox').value);
     if(!link){ toast('That doesn\'t look like a link'); return; }
-    open({type:'edit', id:null, preset:{how:'online', website:link}});
+    readComp({link}, {how:'online', website:link});
   };
+}
+// make a photo small enough to send quickly (longest side 1600px)
+function shrinkPhoto(file){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file), img=new Image();
+    img.onload=()=>{
+      const k=Math.min(1, 1600/Math.max(img.naturalWidth, img.naturalHeight));
+      const cv=document.createElement('canvas'); cv.width=Math.round(img.naturalWidth*k); cv.height=Math.round(img.naturalHeight*k);
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height); URL.revokeObjectURL(url);
+      res(cv.toDataURL('image/jpeg', 0.8));
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(); };
+    img.src=url;
+  });
+}
+// send it to be read, then open the new-comp form filled in with whatever was found
+async function readComp(payload, fallback){
+  if(!navigator.onLine){ open({type:'edit', id:null, preset:fallback, note:'No signal, so it couldn\'t be read. Fill in what you can.'}); return; }
+  view={type:'reading'}; render(); window.scrollTo(0,0);
+  let out=null, problem='';
+  const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(), 45000);
+  try{
+    const res=await fetch(READ_URL, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload), signal:ctl.signal});
+    out=await res.json().catch(()=>null);
+    if(!res.ok) problem = res.status===429 ? 'The reading limit for today has been reached. Fill in what you can.' : 'It couldn\'t be read just now. Fill in what you can.';
+  }catch(e){ problem='It couldn\'t be read just now. Fill in what you can.'; }
+  clearTimeout(timer);
+  if(!view || view.type!=='reading') return;   // she went elsewhere while it was reading
+  if(problem || !out){ open({type:'edit', id:null, preset:fallback, note:problem}); return; }
+  if(out.found===false){ open({type:'edit', id:null, preset:Object.assign({}, fallback, out.website?{website:out.website}:{}), note:(out.reason||'No competition found there.')+' Fill in what you can.'}); return; }
+  const warn = out.banned ? 'Not recommended – '+out.banned : (out.warnings||[]).join(' · ');
+  const preset={
+    prize:out.prize||'', value:out.value?Math.round(out.value*100):0, closes:out.closes||'', resultsBy:out.resultsBy||'',
+    question:out.question||'', answer:out.answer||'', answerSuggested:!!out.answer,
+    how:out.how||fallback.how||'other', website:out.website||fallback.website||'', textNumber:out.textNumber||'', textMessage:out.textMessage||'',
+    phoneNumber:out.phoneNumber||'', postAddress:out.postAddress||'', emailTo:out.emailTo||'',
+    cost:out.cost?Math.round(out.cost*100):0, often:out.often||'once', promoter:out.promoter||'', warning:warn
+  };
+  if(payload.link) preset.seenIn='Website';
+  open({type:'edit', id:null, preset, note:'Filled in for you. Check it over, then tap Save.'});
+}
+function renderReading(m){
+  setHeader('Reading it…');
+  m.innerHTML='<div class="card" style="text-align:center;margin-top:30px;padding:30px 14px"><div style="font-size:44px">🍀</div>'+
+    '<p style="margin:10px 0 0;font-size:19px">Reading the competition…</p><p class="small">This takes about 10–20 seconds.</p></div>';
 }
 function chipsHtml(name, opts, cur){
   return '<div class="chips" data-chips="'+name+'">'+Object.entries(opts).map(([k,v])=>'<button type="button" class="chip'+(k===cur?' on':'')+'" data-v="'+esc(k)+'">'+esc(v)+'</button>').join('')+'</div>';
@@ -541,7 +597,7 @@ function renderEdit(m, v){
   if(!isNew && !compById(v.id)){ view=null; return render(); }
   setHeader(isNew?'New competition':'Edit competition', [{t:'Cancel', fn:()=>{ view = isNew?null:{type:'comp', id:v.id}; render(); }}]);
   const seenOpts={}; SEEN.forEach(s=>seenOpts[s]=s);
-  m.innerHTML=
+  m.innerHTML=(v.note?'<div class="'+(/^Filled in/.test(v.note)?'ok':'note')+'">'+esc(v.note)+'</div>':'')+
     '<label class="f">Prize <span class="hint">what you could win</span></label><input id="eprize" value="'+esc(c.prize||'')+'" placeholder="e.g. Weekend in York">'+
     '<label class="f">Roughly worth (£) <span class="hint">optional</span></label><input id="evalue" inputmode="decimal" value="'+esc(penceToInput(c.value))+'">'+
     '<label class="f">Seen in</label>'+chipsHtml('seenIn', seenOpts, c.seenIn)+
@@ -596,6 +652,7 @@ function renderEdit(m, v){
     const closes=$('#ecloses').value, resultsBy=$('#eresults').value;
     const out = isNew ? {id:uid(), created:new Date().toISOString(), entries:[]} : compById(v.id);
     if(out.answerSuggested && $('#eanswer').value.trim()!==(out.answer||'')) out.answerSuggested=false;
+    if(isNew && c.answerSuggested && $('#eanswer').value.trim()===(c.answer||'')) out.answerSuggested=true;
     Object.assign(out, {
       prize:prizeName, value:toPence($('#evalue').value), seenIn:chosen.seenIn, seenName:$('#eseenName').value.trim(),
       question:$('#equestion').value.trim(), answer:$('#eanswer').value.trim(),
